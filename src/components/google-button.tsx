@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { supabaseBrowser, supabaseEnabled } from "@/lib/supabase-browser";
 import { Button, controlClass, Dialog, Field } from "@/components/ui";
+
+export const GOOGLE_INTENT_KEY = "daylight.google";
 
 export type GoogleResult = { role: string; created: boolean; hasProfile: boolean };
 
@@ -38,6 +41,26 @@ export function GoogleButton({
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [redirecting, setRedirecting] = useState(false);
+
+  async function startGoogle() {
+    setError("");
+    setRedirecting(true);
+    try {
+      sessionStorage.setItem(
+        GOOGLE_INTENT_KEY,
+        JSON.stringify({ intent, next: new URLSearchParams(window.location.search).get("next") ?? "" }),
+      );
+      const { error: oauthError } = await supabaseBrowser().auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback`, queryParams: { prompt: "select_account" } },
+      });
+      if (oauthError) throw oauthError;
+    } catch (err) {
+      setRedirecting(false);
+      setError(err instanceof Error ? err.message : "Could not start Google sign-in.");
+    }
+  }
 
   async function submit() {
     setBusy(true);
@@ -60,11 +83,13 @@ export function GoogleButton({
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        className="press inline-flex h-12 w-full items-center justify-center gap-3 rounded-full bg-white text-[15px] font-semibold text-ink ring-1 ring-line shadow-card hover:bg-canvas"
+        onClick={() => (supabaseEnabled ? startGoogle() : setOpen(true))}
+        disabled={redirecting}
+        className="press inline-flex h-12 w-full items-center justify-center gap-3 rounded-full bg-white text-[15px] font-semibold text-ink ring-1 ring-line shadow-card hover:bg-canvas disabled:opacity-70"
       >
-        <GoogleMark /> {label}
+        <GoogleMark /> {redirecting ? "Opening Google" : label}
       </button>
+      {supabaseEnabled && error ? <p className="mt-3 text-center text-sm text-danger">{error}</p> : null}
       <p className="mt-3 text-center text-[11px] leading-5 text-muted">
         By continuing you confirm you are 18 or over and accept the{" "}
         <Link href="/terms" className="font-medium text-plum">Terms</Link> and{" "}
