@@ -65,7 +65,13 @@ function assertPassword(password: string) {
 
 function assertImage(url: string) {
   if (!url) return "";
-  if (url.startsWith("/uploads/") || url.startsWith("https://images.unsplash.com/")) return url;
+  if (
+    url.startsWith("/uploads/") ||
+    url.startsWith("https://images.unsplash.com/") ||
+    url.startsWith("https://res.cloudinary.com/")
+  ) {
+    return url;
+  }
   throw new DomainError("Use a photo uploaded to Daylight.");
 }
 
