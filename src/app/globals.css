@@ -1,0 +1,153 @@
+@import "tailwindcss";
+@plugin "@iconify/tailwind4";
+
+:root {
+  --canvas: #f4f8f5;
+  --ink: #17201a;
+  --plum: #1f8a4c;
+  --plum-deep: #176d3b;
+  --rose: #e6f4ea;
+  --card: #ffffff;
+  --muted: #6b766e;
+  --line: #e3ebe5;
+  --success: #1f8a4c;
+  --danger: #b4463c;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-ink: var(--ink);
+  --color-plum: var(--plum);
+  --color-plum-deep: var(--plum-deep);
+  --color-rose: var(--rose);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --font-sans:
+    var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --font-serif:
+    var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --shadow-card:
+    0 1px 2px rgb(23 32 26 / 0.04), 0 8px 24px -12px rgb(23 32 26 / 0.12);
+  --shadow-float:
+    0 12px 32px -8px rgb(23 32 26 / 0.18), 0 2px 6px rgb(23 32 26 / 0.06);
+  --radius-card: 1.125rem;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    min-height: 100%;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  img {
+    max-width: 100%;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--plum);
+  }
+
+  ::selection {
+    background: #cdebd8;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--plum);
+    outline-offset: 2px;
+  }
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.story-ring {
+  background: linear-gradient(140deg, #1f8a4c 0%, #5fc08a 55%, #b7e4c7 100%);
+}
+
+@utility card {
+  background: var(--card);
+  border-radius: var(--radius-card);
+  box-shadow:
+    0 0 0 1px var(--line),
+    var(--shadow-card);
+}
+
+@utility card-flat {
+  background: var(--card);
+  border-radius: var(--radius-card);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+@utility press {
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility fade-up {
+  animation: fade-up 220ms ease-out both;
+}

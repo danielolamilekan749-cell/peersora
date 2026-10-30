@@ -1,0 +1,113 @@
+import type { CSSProperties } from "react";
+import { cn } from "@/lib/cn";
+
+/**
+ * Icons come from Iconify's Solar set, compiled to CSS by @iconify/tailwind4.
+ * Only the names listed here are shipped, so keep them as literal class strings.
+ */
+export const icons = {
+  home: "icon-[solar--home-2-linear]",
+  homeBold: "icon-[solar--home-2-bold]",
+  explore: "icon-[solar--compass-linear]",
+  exploreBold: "icon-[solar--compass-bold]",
+  messages: "icon-[solar--chat-round-linear]",
+  messagesBold: "icon-[solar--chat-round-bold]",
+  comment: "icon-[solar--chat-round-line-linear]",
+  search: "icon-[solar--magnifier-linear]",
+  searchBold: "icon-[solar--magnifier-bold]",
+  heart: "icon-[solar--heart-linear]",
+  heartBold: "icon-[solar--heart-bold]",
+  add: "icon-[solar--add-square-linear]",
+  addBold: "icon-[solar--add-square-bold]",
+  addCircle: "icon-[solar--add-circle-linear]",
+  user: "icon-[solar--user-circle-linear]",
+  userBold: "icon-[solar--user-circle-bold]",
+  userRounded: "icon-[solar--user-rounded-linear]",
+  userPlus: "icon-[solar--user-plus-linear]",
+  users: "icon-[solar--users-group-rounded-linear]",
+  menu: "icon-[solar--hamburger-menu-linear]",
+  more: "icon-[solar--menu-dots-bold]",
+  bookmark: "icon-[solar--bookmark-linear]",
+  bookmarkBold: "icon-[solar--bookmark-bold]",
+  send: "icon-[solar--plain-linear]",
+  sendBold: "icon-[solar--plain-2-bold-duotone]",
+  share: "icon-[solar--share-linear]",
+  verified: "icon-[solar--verified-check-bold]",
+  pin: "icon-[solar--map-point-linear]",
+  pinBold: "icon-[solar--map-point-bold]",
+  bell: "icon-[solar--bell-linear]",
+  bellBold: "icon-[solar--bell-bold]",
+  settings: "icon-[solar--settings-linear]",
+  settingsBold: "icon-[solar--settings-bold]",
+  dashboard: "icon-[solar--widget-2-linear]",
+  dashboardBold: "icon-[solar--widget-2-bold]",
+  gallery: "icon-[solar--gallery-linear]",
+  galleryBold: "icon-[solar--gallery-bold]",
+  galleryAdd: "icon-[solar--gallery-add-linear]",
+  camera: "icon-[solar--camera-linear]",
+  cameraBold: "icon-[solar--camera-bold]",
+  cameraAdd: "icon-[solar--camera-add-linear]",
+  close: "icon-[solar--close-circle-linear]",
+  eye: "icon-[solar--eye-linear]",
+  eyeClosed: "icon-[solar--eye-closed-linear]",
+  logout: "icon-[solar--logout-2-linear]",
+  check: "icon-[solar--check-circle-bold]",
+  checkLine: "icon-[solar--check-circle-linear]",
+  shield: "icon-[solar--shield-check-linear]",
+  shieldBold: "icon-[solar--shield-check-bold]",
+  shieldUser: "icon-[solar--shield-user-linear]",
+  info: "icon-[solar--info-circle-linear]",
+  warning: "icon-[solar--danger-triangle-linear]",
+  pen: "icon-[solar--pen-linear]",
+  trash: "icon-[solar--trash-bin-trash-linear]",
+  upload: "icon-[solar--upload-linear]",
+  flag: "icon-[solar--flag-linear]",
+  block: "icon-[solar--forbidden-circle-linear]",
+  filter: "icon-[solar--tuning-2-linear]",
+  sort: "icon-[solar--sort-vertical-linear]",
+  back: "icon-[solar--arrow-left-linear]",
+  forward: "icon-[solar--arrow-right-linear]",
+  chevronDown: "icon-[solar--alt-arrow-down-linear]",
+  globe: "icon-[solar--global-linear]",
+  lock: "icon-[solar--lock-linear]",
+  star: "icon-[solar--star-linear]",
+  starBold: "icon-[solar--star-bold]",
+  link: "icon-[solar--link-linear]",
+  mail: "icon-[solar--letter-linear]",
+  phone: "icon-[solar--phone-linear]",
+  calendar: "icon-[solar--calendar-linear]",
+  clock: "icon-[solar--clock-circle-linear]",
+  inbox: "icon-[solar--inbox-linear]",
+  like: "icon-[solar--like-linear]",
+  chart: "icon-[solar--chart-2-linear]",
+  eyeScan: "icon-[solar--eye-scan-linear]",
+  paperclip: "icon-[solar--paperclip-linear]",
+  login: "icon-[solar--login-3-linear]",
+  document: "icon-[solar--document-text-linear]",
+  sparkle: "icon-[solar--star-fall-linear]",
+  bag: "icon-[solar--bag-3-linear]",
+  bagBold: "icon-[solar--bag-3-bold]",
+  bagCheck: "icon-[solar--bag-check-linear]",
+  grid: "icon-[solar--widget-4-linear]",
+  gridBold: "icon-[solar--widget-4-bold]",
+  clipboard: "icon-[solar--clipboard-list-linear]",
+  clipboardBold: "icon-[solar--clipboard-list-bold]",
+  ratings: "icon-[solar--medal-ribbons-star-linear]",
+  ratingsBold: "icon-[solar--medal-ribbons-star-bold]",
+} as const;
+
+export type IconName = keyof typeof icons;
+
+export function Icon({
+  name,
+  size = 20,
+  className,
+  style,
+}: {
+  name: IconName;
+  size?: number;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return <span aria-hidden="true" className={cn("inline-block shrink-0 align-middle", icons[name], className)} style={{ fontSize: size, ...style }} />;
+}
