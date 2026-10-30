@@ -134,7 +134,6 @@ export function buildViewer(db: Database, actor: Actor): ViewerState {
       fullName: null,
       username: null,
       profileId: null,
-      follows: [],
       savedProfiles: [],
       savedPosts: [],
       likes: [],
@@ -149,7 +148,6 @@ export function buildViewer(db: Database, actor: Actor): ViewerState {
     fullName: actor.user.fullName,
     username: profile?.username ?? null,
     profileId: profile?.id ?? null,
-    follows: db.follows.filter((follow) => follow.userId === actor.user?.id).map((follow) => follow.profileId),
     savedProfiles: db.savedProfiles
       .filter((save) => save.userId === actor.user?.id)
       .map((save) => save.targetId),
@@ -229,7 +227,6 @@ function newUser(email: string, fullName: string, role: UserRecord["role"], prov
     createdAt: now(),
     lastActiveAt: now(),
     notificationPrefs: {
-      followers: true,
       likes: true,
       comments: true,
       orders: true,
@@ -336,7 +333,6 @@ export function completeHookProfile(db: Database, actor: Actor, input: Record<st
     visibility: "hidden",
     discoverable: false,
     featured: false,
-    sample: false,
     presenceHint: null,
     joinedAt: now(),
     lastActiveAt: now(),
@@ -474,20 +470,11 @@ function findProfile(db: Database, profileId: string) {
   return profile;
 }
 
-export function toggleFollow(db: Database, actor: Actor, profileId: string, on: boolean) {
-  const user = requireUser(db, actor);
-  const profile = findProfile(db, profileId);
-  if (profile.userId === user.id) throw new DomainError("You cannot follow your own profile.");
-  db.follows = db.follows.filter((follow) => !(follow.userId === user.id && follow.profileId === profileId));
-  if (on) {
-    db.follows.push({ userId: user.id, profileId, createdAt: now() });
-    notify(db, profile.userId, "followers", "New follower", `${user.fullName} followed you.`, `/profile/${profile.username}`);
-  }
-}
-
 export function toggleSave(db: Database, actor: Actor, kind: "profile" | "post", targetId: string, on: boolean) {
   const user = requireUser(db, actor);
   const key = kind === "profile" ? "savedProfiles" : "savedPosts";
+  const exists = kind === "profile" ? db.profiles.some((item) => item.id === targetId) : db.posts.some((item) => item.id === targetId);
+  if (!exists) throw new DomainError("That is no longer available.", "missing", 404);
   db[key] = db[key].filter((save) => !(save.userId === user.id && save.targetId === targetId));
   if (on) db[key].push({ userId: user.id, targetId, createdAt: now() });
 }
@@ -594,7 +581,7 @@ export function reviewProfile(db: Database, actor: Actor, input: Record<string, 
       (order.status === "accepted" || order.status === "completed"),
   );
   if (!connected) {
-    throw new DomainError("You can rate a profile after she accepts your order.", "ineligible", 403);
+    throw new DomainError("You can rate a profile after the hook accepts your order.", "ineligible", 403);
   }
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new DomainError("Choose a rating from 1 to 5.");
   if (body.length < 20) throw new DomainError("Write at least 20 characters so the review is useful.");
@@ -649,7 +636,7 @@ export function placeOrder(db: Database, actor: Actor, input: Record<string, unk
   const profile = findProfile(db, text(input.profileId, 80));
   const owner = profile.userId ? db.users.find((item) => item.id === profile.userId) : undefined;
   if (!profile.userId || !owner || owner.status !== "active" || owner.deactivated) {
-    throw new DomainError("This sample profile is a preview and cannot take orders.", "sample", 400);
+    throw new DomainError("This profile is not taking orders right now.", "forbidden", 403);
   }
   if (hiddenFrom(db, actor, profile) || !isPubliclyListed(profile, owner.status)) {
     throw new DomainError("This profile is not taking orders right now.", "forbidden", 403);
@@ -708,11 +695,10 @@ export function listOrders(db: Database, actor: Actor) {
   return { role: user.role, items, viewer: buildViewer(db, actor) };
 }
 
-/** Everything the user profile screen needs: saved posts, ratings given, orders, following. */
+/** Everything the user profile screen needs: saved posts, ratings given, orders. */
 export function memberHome(db: Database, actor: Actor) {
   const user = requireUser(db, actor);
   const savedIds = new Set(db.savedPosts.filter((save) => save.userId === user.id).map((save) => save.targetId));
-  const followedIds = new Set(db.follows.filter((follow) => follow.userId === user.id).map((follow) => follow.profileId));
   const ratings: GivenRating[] = db.reviews
     .filter((review) => review.authorId === user.id && review.status !== "removed")
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
@@ -726,11 +712,9 @@ export function memberHome(db: Database, actor: Actor) {
         profile: { id: review.profileId, username: profile?.username ?? "", displayName: profile?.displayName ?? "Hook", avatar: profile?.avatar ?? "" },
       };
     });
-  const listed = listedProfiles(db, actor);
   return {
     viewer: buildViewer(db, actor),
     account: { fullName: user.fullName, email: user.email, avatar: user.avatar ?? "", joinedAt: user.createdAt, role: user.role },
-    following: listed.filter((profile) => followedIds.has(profile.id)).map((profile) => presentProfile(db, profile)),
     savedPosts: db.posts
       .filter((post) => savedIds.has(post.id) && post.visibility === "public")
       .map((post) => presentPost(db, post)),
@@ -802,7 +786,7 @@ export function dashboard(db: Database, actor: Actor) {
     posts,
     stats: {
       views: db.views.filter((view) => view.profileId === profile.id).length,
-      followers: db.follows.filter((follow) => follow.profileId === profile.id).length,
+      likes: db.likes.filter((like) => db.posts.some((post) => post.id === like.postId && post.profileId === profile.id)).length,
       engagement,
       pendingOrders,
     },
@@ -933,7 +917,7 @@ export function savePost(db: Database, actor: Actor, input: Record<string, unkno
   const profile = creatorProfile(db, user);
   const caption = text(input.caption, 2000);
   const images = Array.isArray(input.images)
-    ? input.images.map((item) => assertImage(text(item, 300))).filter(Boolean).slice(0, 6)
+    ? input.images.map((item) => assertImage(text(item, 300))).filter(Boolean).slice(0, 10)
     : [];
   if (!caption) throw new DomainError("Add a caption.");
   if (!images.length) throw new DomainError("Add at least one photo.");
@@ -954,7 +938,6 @@ export function savePost(db: Database, actor: Actor, input: Record<string, unkno
     caption,
     createdAt: now(),
     visibility: input.visibility === "hidden" ? "hidden" : "public",
-    sample: false,
     frame,
   };
   db.posts.unshift(post);
@@ -1042,7 +1025,6 @@ export function adminOverview(db: Database, actor: Actor) {
           city: profile?.city ?? "",
           country: profile?.country ?? "",
           age: profile ? ageFromDob(profile.dateOfBirth) : null,
-          sample: profile?.sample ?? false,
         };
       }),
     reports: db.reports.slice(0, 40).map((report) => ({

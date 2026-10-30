@@ -7,7 +7,6 @@ export type LocationPrivacy = "city" | "region" | "hidden";
 export type UserStatus = "active" | "suspended" | "deleted";
 
 export type NotificationPrefs = {
-  followers: boolean;
   likes: boolean;
   comments: boolean;
   orders: boolean;
@@ -51,7 +50,6 @@ export type ProfileRecord = {
   visibility: "public" | "hidden";
   discoverable: boolean;
   featured: boolean;
-  sample: boolean;
   presenceHint: Presence | null;
   joinedAt: string;
   lastActiveAt: string;
@@ -64,7 +62,6 @@ export type PostRecord = {
   caption: string;
   createdAt: string;
   visibility: "public" | "hidden";
-  sample: boolean;
   frame: "portrait" | "square";
 };
 
@@ -75,12 +72,6 @@ export type CommentRecord = {
   body: string;
   createdAt: string;
   hidden: boolean;
-};
-
-export type FollowRecord = {
-  userId: string;
-  profileId: string;
-  createdAt: string;
 };
 
 export type LikeRecord = {
@@ -187,7 +178,6 @@ export type Database = {
   profiles: ProfileRecord[];
   posts: PostRecord[];
   comments: CommentRecord[];
-  follows: FollowRecord[];
   likes: LikeRecord[];
   savedProfiles: SaveRecord[];
   savedPosts: SaveRecord[];
@@ -218,10 +208,7 @@ export type PublicProfile = {
   joinedAt: string;
   featured: boolean;
   isNew: boolean;
-  followers: number;
-  following: number;
   postCount: number;
-  sample: boolean;
   orderable: boolean;
   rating: number | null;
   reviewCount: number;
@@ -246,7 +233,6 @@ export type PublicPost = {
   createdAt: string;
   likeCount: number;
   commentCount: number;
-  sample: boolean;
   frame: "portrait" | "square";
 };
 
@@ -257,7 +243,6 @@ export type ViewerState = {
   fullName: string | null;
   username: string | null;
   profileId: string | null;
-  follows: string[];
   savedProfiles: string[];
   savedPosts: string[];
   likes: string[];

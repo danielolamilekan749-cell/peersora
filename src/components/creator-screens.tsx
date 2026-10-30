@@ -51,10 +51,10 @@ type DashboardData = {
     discoverable: boolean;
     verification: string;
     completion: number;
-    followers: number;
+    likes: number;
   };
   posts?: ManagedPost[];
-  stats?: { views: number; followers: number; engagement: number; pendingOrders: number };
+  stats?: { views: number; likes: number; engagement: number; pendingOrders: number };
   notifications?: { id: string; title: string; body: string; createdAt: string; read: boolean }[];
 };
 
@@ -87,7 +87,7 @@ export function OverviewScreen() {
   const profile = data.profile;
   const stats: { label: string; value: number; icon: IconName }[] = [
     { label: "Profile views", value: data.stats.views, icon: "eyeScan" },
-    { label: "Followers", value: data.stats.followers, icon: "users" },
+    { label: "Likes", value: data.stats.likes, icon: "like" },
     { label: "Engagement", value: data.stats.engagement, icon: "like" },
     { label: "Pending orders", value: data.stats.pendingOrders, icon: "clipboard" },
   ];
@@ -300,8 +300,8 @@ export function PostsManager() {
   async function addFiles(list: FileList | null) {
     if (!list) return;
     const uploaded: string[] = [];
-    for (const file of Array.from(list).slice(0, 6)) uploaded.push(await uploadImage(file));
-    setImages((current) => [...current, ...uploaded].slice(0, 6));
+    for (const file of Array.from(list).slice(0, 10)) uploaded.push(await uploadImage(file));
+    setImages((current) => [...current, ...uploaded].slice(0, 10));
   }
 
   async function save() {
@@ -367,7 +367,7 @@ export function PostsManager() {
       </div>
       <Dialog open={open} title={editing ? "Edit post" : "New post"} onClose={() => setOpen(false)}>
         <div className="space-y-4">
-          <Field label="Photos" hint="Up to six photos. JPG, PNG, or WebP.">
+          <Field label="Photos" hint="Up to 10 photos. People swipe through them. JPG, PNG, or WebP.">
             <span className="flex flex-wrap gap-2">
               {images.map((image, imageIndex) => (
                 <span key={image} className="relative h-20 w-20 overflow-hidden rounded-xl ring-1 ring-line">
@@ -375,7 +375,7 @@ export function PostsManager() {
                   <button type="button" aria-label="Remove photo" onClick={() => setImages(images.filter((_, i) => i !== imageIndex))} className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-ink/70 text-white"><Icon name="close" size={14} /></button>
                 </span>
               ))}
-              {images.length < 6 ? (
+              {images.length < 10 ? (
                 <span className="press grid h-20 w-20 cursor-pointer place-items-center rounded-xl bg-canvas text-muted ring-1 ring-dashed ring-line hover:text-ink">
                   <Icon name="addCircle" size={24} />
                   <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" onChange={(event) => addFiles(event.target.files)} />

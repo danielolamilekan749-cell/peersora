@@ -34,7 +34,7 @@ function compact(value: number) {
 }
 
 export function ProfileScreen({ username, initialTab = "posts" }: { username: string; initialTab?: TabId }) {
-  const { profiles, posts, follow, viewer, block, saveProfile, orderNow } = usePlatform();
+  const { profiles, posts, viewer, block, saveProfile, orderNow } = usePlatform();
   const known = profiles.find((profile) => profile.username === username);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [error, setError] = useState("");
@@ -68,7 +68,6 @@ export function ProfileScreen({ username, initialTab = "posts" }: { username: st
   if (!profile) return <EmptyState icon="lock" title="Profile unavailable" body={error || "This profile is private, removed, or still waiting for verification."} />;
 
   const owner = viewer?.profileId === profile.id;
-  const following = viewer?.follows.includes(profile.id);
   const saved = viewer?.savedProfiles.includes(profile.id);
   const likes = gallery.reduce((sum, post) => sum + post.likeCount, 0);
   const hiddenFromPublic = owner && !profiles.some((item) => item.id === profile.id);
@@ -106,14 +105,12 @@ export function ProfileScreen({ username, initialTab = "posts" }: { username: st
         </h1>
         <p className="text-sm text-muted">@{profile.username}</p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
-          {profile.sample ? <Tag tone="muted">Sample profile</Tag> : null}
           <Tag tone="muted"><Icon name="pin" size={11} /> {profile.cityLabel}{profile.cityLabel === "Location private" || !profile.country ? "" : `, ${profile.country}`}</Tag>
           {profile.age ? <Tag tone="muted">{profile.age}</Tag> : null}
         </div>
 
-        <div className="mx-auto mt-5 grid max-w-sm grid-cols-4 text-center">
-          <Stat label="Followers" value={compact(profile.followers)} />
-          <Stat label="Following" value={compact(profile.following)} />
+        <div className="mx-auto mt-5 grid max-w-sm grid-cols-3 text-center">
+          <Stat label="Posts" value={compact(gallery.length)} />
           <Stat label="Likes" value={compact(likes)} />
           <Stat label="Rating" value={profile.rating ? profile.rating.toFixed(1) : "–"} />
         </div>
@@ -129,9 +126,6 @@ export function ProfileScreen({ username, initialTab = "posts" }: { username: st
             <>
               <Button className="flex-1" onClick={() => orderNow(profile)}>
                 <Icon name="bag" size={18} /> Order now
-              </Button>
-              <Button variant={following ? "outline" : "soft"} className="flex-1" onClick={() => follow(profile.id)}>
-                <Icon name={following ? "check" : "userPlus"} size={18} /> {following ? "Following" : "Follow"}
               </Button>
             </>
           )}
@@ -181,7 +175,6 @@ export function ProfileScreen({ username, initialTab = "posts" }: { username: st
             <AboutRow icon="calendar" title="Joined" body={formatLongDate(profile.joinedAt)} />
             <AboutRow icon="shieldBold" title="Verification" body={profile.verified ? "Age and identity verified by Daylight." : "Waiting for age and identity verification."} />
             <AboutRow icon="star" title="Rating" body={profile.reviewCount > 0 ? `${profile.rating?.toFixed(1)} average from ${profile.reviewCount} verified order${profile.reviewCount === 1 ? "" : "s"}.` : "No ratings yet."} />
-            {profile.sample ? <AboutRow icon="info" title="Sample content" body="This is sample profile content for the preview directory. It is not a claim about a real person on the platform." /> : null}
           </div>
         ) : null}
       </div>
@@ -275,7 +268,7 @@ function Reviews({ profile, reviews, canReview, owner, onCreated }: { profile: P
   return (
     <div className="space-y-3">
       {profile.rating ? <RatingSummary rating={profile.rating} reviews={reviews} /> : null}
-      {reviews.length === 0 ? <EmptyState icon="star" title="No ratings yet" body="Ratings come only from users after an accepted order. Sample profiles do not include fabricated ratings." /> : null}
+      {reviews.length === 0 ? <EmptyState icon="star" title="No ratings yet" body="Ratings come only from users after an accepted order." /> : null}
       {reviews.map((review) => (
         <article key={review.id} className="card p-4">
           <div className="flex items-center justify-between gap-3">
@@ -314,7 +307,7 @@ function Reviews({ profile, reviews, canReview, owner, onCreated }: { profile: P
           <Button type="submit">Publish rating</Button>
         </form>
       ) : owner ? null : (
-        <p className="flex items-start gap-2 px-1 text-[13px] leading-5 text-muted"><Icon name="info" size={16} className="mt-0.5 shrink-0" /> Ratings unlock after she accepts your order. Place one with Order now.</p>
+        <p className="flex items-start gap-2 px-1 text-[13px] leading-5 text-muted"><Icon name="info" size={16} className="mt-0.5 shrink-0" /> Ratings unlock after the hook accepts your order. Place one with Order now.</p>
       )}
     </div>
   );

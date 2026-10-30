@@ -27,7 +27,6 @@ function Section({ icon, title, body, children }: { icon: IconName; title: strin
 
 const prefLabels: Record<string, string> = {
   orders: "Orders",
-  follows: "New followers",
   likes: "Likes on posts",
   comments: "Comments",
   verification: "Verification updates",

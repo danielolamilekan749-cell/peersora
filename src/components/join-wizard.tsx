@@ -95,7 +95,7 @@ function UserFlow({ signedRole }: { signedRole: string }) {
         <>
           <span className="grid h-12 w-12 place-items-center rounded-2xl bg-rose text-plum"><Icon name="user" size={24} /></span>
           <h1 className="mt-4 text-2xl font-semibold tracking-tight">Join as a user</h1>
-          <p className="mt-1.5 text-sm leading-6 text-muted">Save posts, follow profiles, place orders, and rate. It takes one tap.</p>
+          <p className="mt-1.5 text-sm leading-6 text-muted">Save posts, place orders, and rate. It takes one tap.</p>
           <div className="mt-6">
             <GoogleButton
               intent="user"

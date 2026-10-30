@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
@@ -8,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { formatLongDate, formatWhen } from "@/lib/format";
 import type { PublicComment, PublicPost, PublicProfile } from "@/lib/types";
 import { ReportDialog, share } from "@/components/discovery";
+import { ImageCarousel } from "@/components/carousel";
 import { Icon } from "@/components/icon";
 import { usePlatform } from "@/components/platform";
 import { Avatar, EmptyState, Menu, MenuItem, Skeleton } from "@/components/ui";
@@ -25,7 +25,6 @@ export function PostScreen({ id }: { id: string }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [body, setBody] = useState("");
-  const [index, setIndex] = useState(0);
   const [reportOpen, setReportOpen] = useState(false);
 
   function load() {
@@ -36,7 +35,6 @@ export function PostScreen({ id }: { id: string }) {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     load().finally(() => {
       if (active) setLoading(false);
     });
@@ -55,7 +53,6 @@ export function PostScreen({ id }: { id: string }) {
   const postId = post.id;
   const liked = viewer?.likes.includes(postId);
   const saved = viewer?.savedPosts.includes(post.id);
-  const image = post.images[index] ?? post.images[0];
   const comments = data?.comments ?? [];
 
   async function comment() {
@@ -76,21 +73,13 @@ export function PostScreen({ id }: { id: string }) {
         <Icon name="back" size={18} /> Back to feed
       </Link>
       <article className="card grid overflow-hidden lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-        <div className="relative bg-canvas">
-          <div className={cn("relative", post.frame === "square" ? "aspect-square" : "aspect-[4/5]", "lg:min-h-[560px]")}>
-            {image ? <Image src={image} alt={`Post by ${post.displayName}`} fill sizes="(min-width: 1024px) 55vw, 100vw" className="object-cover" priority /> : null}
-          </div>
-          {post.images.length > 1 ? (
-            <>
-              <span className="absolute right-3 top-3 rounded-full bg-ink/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur">{index + 1}/{post.images.length}</span>
-              <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
-                {post.images.map((item, imageIndex) => (
-                  <button key={item} type="button" aria-label={`Photo ${imageIndex + 1}`} onClick={() => setIndex(imageIndex)} className={cn("h-1.5 rounded-full transition-all", imageIndex === index ? "w-4 bg-white" : "w-1.5 bg-white/60")} />
-                ))}
-              </div>
-            </>
-          ) : null}
-        </div>
+        <ImageCarousel
+          images={post.images}
+          alt={`Post by ${post.displayName}`}
+          sizes="(min-width: 1024px) 55vw, 100vw"
+          priority
+          className={cn(post.frame === "square" ? "aspect-square" : "aspect-[4/5]", "lg:min-h-[560px]")}
+        />
         <div className="flex flex-col">
           <header className="flex items-center gap-3 border-b border-line px-4 py-3">
             <Link href={`/profile/${post.username}`}>
@@ -101,7 +90,7 @@ export function PostScreen({ id }: { id: string }) {
                 <span className="truncate">{post.username}</span>
                 {data?.profile.verified ? <Icon name="verified" size={14} className="text-plum" /> : null}
               </Link>
-              <p className="truncate text-xs text-muted">{post.displayName}{post.sample ? " · Sample post" : ""}</p>
+              <p className="truncate text-xs text-muted">{post.displayName}</p>
             </div>
             <Menu label="Post actions">
               <MenuItem icon="link" onClick={() => navigator.clipboard.writeText(window.location.href)}>Copy link</MenuItem>

@@ -18,7 +18,6 @@ export function emptyViewer(id: string): ViewerState {
     fullName: null,
     username: null,
     profileId: null,
-    follows: [],
     savedProfiles: [],
     savedPosts: [],
     likes: [],
@@ -46,10 +45,6 @@ export function ratingFor(db: Database, profileId: string) {
 export function presentProfile(db: Database, profile: ProfileRecord, now = Date.now()): PublicProfile {
   const age = ageFromDob(profile.dateOfBirth, new Date(now));
   const { rating, reviewCount } = ratingFor(db, profile.id);
-  const followers = db.follows.filter((follow) => follow.profileId === profile.id).length;
-  const following = profile.userId
-    ? db.follows.filter((follow) => follow.userId === profile.userId).length
-    : 0;
   const owner = profile.userId ? db.users.find((user) => user.id === profile.userId) : undefined;
   return {
     id: profile.id,
@@ -67,12 +62,9 @@ export function presentProfile(db: Database, profile: ProfileRecord, now = Date.
     joinedAt: profile.joinedAt,
     featured: profile.featured,
     isNew: isRecentlyJoined(profile.joinedAt, now),
-    followers,
-    following,
     postCount: db.posts.filter(
       (post) => post.profileId === profile.id && post.visibility === "public",
     ).length,
-    sample: profile.sample,
     orderable: Boolean(owner && owner.status === "active" && !owner.deactivated),
     rating,
     reviewCount,
@@ -93,7 +85,6 @@ export function presentPost(db: Database, post: PostRecord): PublicPost {
     likeCount: db.likes.filter((like) => like.postId === post.id).length,
     commentCount: db.comments.filter((comment) => comment.postId === post.id && !comment.hidden)
       .length,
-    sample: post.sample,
     frame: post.frame,
   };
 }

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, ApiError } from "@/lib/api";
-import { previewFeed } from "@/lib/preview";
 import type { PublicPost, PublicProfile, ViewerState } from "@/lib/types";
 import { Dialog } from "@/components/ui";
 import { JoinChoice } from "@/components/join-choice";
@@ -24,7 +23,6 @@ type PlatformValue = {
   askJoin: () => void;
   orderNow: (profile: PublicProfile) => void;
   refresh: () => Promise<void>;
-  follow: (id: string) => Promise<void>;
   saveProfile: (id: string) => Promise<void>;
   savePost: (id: string) => Promise<void>;
   like: (id: string) => Promise<void>;
@@ -33,8 +31,6 @@ type PlatformValue = {
 };
 
 const PlatformContext = createContext<PlatformValue | null>(null);
-const preview = previewFeed();
-
 export function usePlatform() {
   const value = useContext(PlatformContext);
   if (!value) throw new Error("Platform provider is missing.");
@@ -42,8 +38,8 @@ export function usePlatform() {
 }
 
 export function PlatformProvider({ children }: { children: ReactNode }) {
-  const [profiles, setProfiles] = useState(preview.profiles);
-  const [posts, setPosts] = useState(preview.posts);
+  const [profiles, setProfiles] = useState<PublicProfile[]>([]);
+  const [posts, setPosts] = useState<PublicPost[]>([]);
   const [viewer, setViewer] = useState<ViewerState | null>(null);
   const [loading, setLoading] = useState(true);
   const [place, setPlaceState] = useState("Anywhere");
@@ -76,7 +72,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
     const saved = window.localStorage.getItem("dl_place");
     if (saved) setPlaceState(saved);
     refresh()
-      .catch(() => toast("Live directory could not refresh. Showing the sample profiles."))
+      .catch(() => toast("The feed could not refresh. Check your connection and try again."))
       .finally(() => setLoading(false));
   }, [refresh, toast]);
 
@@ -92,7 +88,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
         return false;
       }
       if (viewer.role === "guest") {
-        setAuthMessage("Join Daylight to like, follow, save, comment, or report.");
+        setAuthMessage("Join Daylight to like, save, comment, or report.");
         setJoinOpen(true);
         return false;
       }
@@ -148,11 +144,6 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
         }
       },
       refresh,
-      follow: async (id) => {
-        const on = !viewer?.follows.includes(id);
-        const ok = await act({ action: on ? "follow" : "unfollow", id });
-        if (ok) toast(on ? "Following" : "Removed from following");
-      },
       saveProfile: async (id) => {
         const on = !viewer?.savedProfiles.includes(id);
         const ok = await act({ action: on ? "save-profile" : "unsave-profile", id });
@@ -203,7 +194,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
       <OrderDialog
         profile={orderTarget}
         onClose={() => setOrderTarget(null)}
-        onPlaced={() => toast("Order sent. You will be notified when she responds.")}
+        onPlaced={() => toast("Order sent. You will be notified when the hook responds.")}
         onAuth={(message) => {
           setAuthMessage(message);
           setJoinOpen(true);

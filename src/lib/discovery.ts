@@ -8,7 +8,7 @@ export type DiscoveryFilter =
   | "rated"
   | "verified";
 
-export type DiscoverySort = "suggested" | "newest" | "followed" | "active" | "rated";
+export type DiscoverySort = "suggested" | "newest" | "active" | "rated";
 
 const presenceRank = { online: 0, recent: 1, offline: 2 };
 
@@ -52,7 +52,6 @@ export function filterProfiles(
     if (options.sort === "newest") {
       return +new Date(b.joinedAt) - +new Date(a.joinedAt);
     }
-    if (options.sort === "followed") return b.followers - a.followers;
     if (options.sort === "active") {
       return presenceRank[a.presence] - presenceRank[b.presence];
     }

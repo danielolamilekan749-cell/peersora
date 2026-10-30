@@ -29,7 +29,6 @@ export const REPORT_REASONS = [
   "Other",
 ] as const;
 
-export const DEMO_PASSWORD = "daylight-demo";
 
 export const RESERVED_USERNAMES = new Set([
   "admin",

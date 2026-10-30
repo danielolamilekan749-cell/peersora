@@ -155,10 +155,10 @@ function PublicChrome({ children, role }: { children: ReactNode; role: string | 
         </Link>
       </header>
 
-      <div className="mx-auto w-full max-w-6xl px-3 pb-24 sm:px-4 lg:mx-0 lg:ml-8 lg:mr-auto lg:min-h-screen lg:max-w-[1080px] lg:px-2 lg:pb-16 lg:pt-6">
+      <div className="mx-auto w-full max-w-6xl px-3 pb-24 sm:px-4 lg:min-h-screen lg:max-w-[1080px] lg:px-2 lg:pb-16 lg:pt-6">
         {children}
         <footer className="px-1 py-8 text-center text-[11px] leading-5 text-muted">
-          <p>Adults 18+ only. Sample profiles are previews, not verified members.</p>
+          <p>Adults 18+ only. Every hook is reviewed before going live.</p>
           <p className="mt-2 flex flex-wrap justify-center gap-x-3">
             <Link href="/guidelines" className="hover:text-ink">Guidelines</Link>
             <Link href="/terms" className="hover:text-ink">Terms</Link>

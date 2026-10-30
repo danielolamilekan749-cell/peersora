@@ -45,7 +45,7 @@ export function NotificationsScreen() {
   if (!viewer || viewer.role === "guest") {
     return (
       <div className="pt-3 lg:pt-0">
-        <EmptyState icon="bell" title="Sign in for alerts" body="Orders, follows, likes, and verification updates appear here." action={<Button onClick={() => askAuth("Join or sign in to see your notifications.")}>Join or sign in</Button>} />
+        <EmptyState icon="bell" title="Sign in for alerts" body="Orders, likes, comments, and verification updates appear here." action={<Button onClick={() => askAuth("Join or sign in to see your notifications.")}>Join or sign in</Button>} />
       </div>
     );
   }
@@ -70,7 +70,7 @@ export function NotificationsScreen() {
         }
       />
       <div className="mt-4">
-        {items.length === 0 ? <EmptyState icon="bell" title="You are caught up" body="New orders, followers, likes, comments, and verification updates will show up here." /> : null}
+        {items.length === 0 ? <EmptyState icon="bell" title="You are caught up" body="New orders, likes, comments, and verification updates will show up here." /> : null}
         {items.length > 0 ? (
           <div className="card divide-y divide-line overflow-hidden">
             {items.map((item) => {

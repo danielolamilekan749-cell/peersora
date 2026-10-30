@@ -9,6 +9,7 @@ import { filterPosts, filterProfiles } from "@/lib/discovery";
 import { formatWhen } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { PublicPost, PublicProfile } from "@/lib/types";
+import { ImageCarousel } from "@/components/carousel";
 import { Icon } from "@/components/icon";
 import { usePlatform } from "@/components/platform";
 import { Avatar, Button, controlClass, Dialog, EmptyState, Field, Menu, MenuItem } from "@/components/ui";
@@ -44,7 +45,7 @@ export function DiscoveryScreen({ mode }: { mode: "home" | "explore" }) {
 
   if (mode === "home") {
     return (
-      <div className="mx-auto w-full max-w-[470px] pt-3 lg:mx-0 lg:pt-0">
+      <div className="mx-auto w-full max-w-[470px] pt-3 lg:pt-0">
         <Stories profiles={stories} />
         <div className="mt-3 space-y-3 lg:mt-4 lg:space-y-4">
           {visiblePosts.length ? (
@@ -54,14 +55,14 @@ export function DiscoveryScreen({ mode }: { mode: "home" | "explore" }) {
           )}
         </div>
         <p className="px-4 pt-6 text-center text-[11px] leading-5 text-muted">
-          Adults 18 and over. Profiles marked Sample are previews. Ratings appear only after a real, accepted order.
+          Adults 18 and over. Ratings appear only after a real, accepted order.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="pt-3 lg:max-w-[720px] lg:pt-0">
+    <div className="mx-auto w-full pt-3 lg:max-w-[720px] lg:pt-0">
       <label className="relative block">
         <span className="sr-only">Search</span>
         <Icon name="search" size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
@@ -154,12 +155,10 @@ export function ProfileCard({ profile }: { profile: PublicProfile }) {
 
 export function PostCard({ post }: { post: PublicPost }) {
   const { viewer, like, savePost, orderNow, profiles } = usePlatform();
-  const [index, setIndex] = useState(0);
   const [reportOpen, setReportOpen] = useState(false);
   const liked = viewer?.likes.includes(post.id);
   const saved = viewer?.savedPosts.includes(post.id);
   const profile = profiles.find((item) => item.id === post.profileId);
-  const image = post.images[index] ?? post.images[0];
 
   return (
     <article className="card overflow-hidden">
@@ -175,8 +174,7 @@ export function PostCard({ post }: { post: PublicPost }) {
             <span className="shrink-0 text-xs text-muted">{formatWhen(post.createdAt)}</span>
           </div>
           <p className="truncate text-xs text-muted">
-            {post.sample ? "Sample" : profile?.cityLabel}
-            {profile?.featured ? ` · Suggested for you` : ""}
+            {profile?.cityLabel}
           </p>
         </div>
         {profile ? (
@@ -189,20 +187,14 @@ export function PostCard({ post }: { post: PublicPost }) {
           <MenuItem icon="flag" onClick={() => setReportOpen(true)}>Report post</MenuItem>
         </Menu>
       </header>
-      <div className="relative mx-2 overflow-hidden rounded-xl bg-canvas">
-        <Link href={`/posts/${post.id}`} className={cn("relative block", post.frame === "square" ? "aspect-square" : "aspect-[4/5]")}>
-          {image ? <Image src={image} alt={`Post by ${post.displayName}`} fill sizes="(min-width: 1024px) 470px, 100vw" className="object-cover" /> : null}
-        </Link>
-        {post.images.length > 1 ? (
-          <>
-            <span className="absolute right-2.5 top-2.5 rounded-full bg-ink/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur">{index + 1}/{post.images.length}</span>
-            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
-              {post.images.map((item, imageIndex) => (
-                <button key={item} type="button" aria-label={`Photo ${imageIndex + 1}`} onClick={() => setIndex(imageIndex)} className={cn("h-1.5 rounded-full transition-all", imageIndex === index ? "w-4 bg-white" : "w-1.5 bg-white/60")} />
-              ))}
-            </div>
-          </>
-        ) : null}
+      <div className="mx-2">
+        <ImageCarousel
+          images={post.images}
+          alt={`Post by ${post.displayName}`}
+          href={`/posts/${post.id}`}
+          sizes="(min-width: 1024px) 470px, 100vw"
+          className={cn("rounded-xl", post.frame === "square" ? "aspect-square" : "aspect-[4/5]")}
+        />
       </div>
       <div className="px-3.5 pb-4 pt-2.5">
         <div className="flex items-center gap-1 text-sm">

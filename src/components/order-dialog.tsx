@@ -55,16 +55,11 @@ export function OrderDialog({
             </div>
           </div>
           {!profile.orderable ? (
-            <div className="space-y-3 text-sm leading-6 text-muted">
-              <p>This sample profile is a preview and cannot take orders.</p>
-              <Link href="/profile/amara" onClick={onClose} className="inline-flex items-center gap-1 font-medium text-plum">
-                Try Amara, the demo hook <Icon name="forward" size={14} />
-              </Link>
-            </div>
+            <p className="text-sm leading-6 text-muted">This profile is not taking orders right now.</p>
           ) : (
             <>
-              <Field label="Note" hint="Optional. She accepts or declines your order and you are notified either way.">
-                <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={4} maxLength={500} className={`${controlClass} h-auto py-3`} placeholder="Tell her what you have in mind." />
+              <Field label="Note" hint="Optional. The hook accepts or declines your order and you are notified either way.">
+                <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={4} maxLength={500} className={`${controlClass} h-auto py-3`} placeholder="Tell them what you have in mind." />
               </Field>
               {error ? <p className="text-sm text-danger">{error}</p> : null}
               <Button onClick={place} disabled={busy} className="w-full">

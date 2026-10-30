@@ -7,7 +7,6 @@ import {
   reportContent,
   reviewProfile,
   setCommentHidden,
-  toggleFollow,
   toggleLike,
   toggleSave,
   unblock,
@@ -20,9 +19,7 @@ export async function POST(request: Request) {
   }
   return change((db, ctx) => {
     const id = typeof body.id === "string" ? body.id : "";
-    if (body.action === "follow") toggleFollow(db, ctx, id, true);
-    else if (body.action === "unfollow") toggleFollow(db, ctx, id, false);
-    else if (body.action === "save-profile") toggleSave(db, ctx, "profile", id, true);
+    if (body.action === "save-profile") toggleSave(db, ctx, "profile", id, true);
     else if (body.action === "unsave-profile") toggleSave(db, ctx, "profile", id, false);
     else if (body.action === "save-post") toggleSave(db, ctx, "post", id, true);
     else if (body.action === "unsave-post") toggleSave(db, ctx, "post", id, false);

@@ -15,13 +15,12 @@ import { Button, EmptyState, Skeleton } from "@/components/ui";
 
 type Home = {
   account: { fullName: string; email: string; avatar: string; joinedAt: string; role: string };
-  following: PublicProfile[];
   savedPosts: PublicPost[];
   ratings: GivenRating[];
   orders: number;
 };
 
-type TabId = "saved" | "following" | "ratings";
+type TabId = "saved" | "ratings";
 
 export function MeScreen() {
   const router = useRouter();
@@ -40,7 +39,7 @@ export function MeScreen() {
   if (!signedIn && !platformLoading) {
     return (
       <div className="pt-3 lg:max-w-xl lg:pt-0">
-        <EmptyState icon="user" title="Join to get your profile" body="Save posts, follow profiles, place orders, and rate." action={<Button onClick={askJoin}>Join Daylight</Button>} />
+        <EmptyState icon="user" title="Join to get your profile" body="Save posts, place orders, and rate." action={<Button onClick={askJoin}>Join Daylight</Button>} />
       </div>
     );
   }
@@ -56,7 +55,6 @@ export function MeScreen() {
   const initial = data.account.fullName.trim().slice(0, 1).toUpperCase() || "U";
   const tabs: { id: TabId; label: string; count: number }[] = [
     { id: "saved", label: "Saved", count: data.savedPosts.length },
-    { id: "following", label: "Following", count: data.following.length },
     { id: "ratings", label: "Ratings given", count: data.ratings.length },
   ];
 
@@ -70,9 +68,8 @@ export function MeScreen() {
         <span className="relative mx-auto grid h-24 w-24 place-items-center rounded-full bg-plum text-4xl font-semibold text-white ring-4 ring-white shadow-float">{initial}</span>
         <h1 className="mt-3 text-xl font-semibold tracking-tight sm:text-2xl">{data.account.fullName}</h1>
         <p className="text-sm text-muted">User · joined {formatLongDate(data.account.joinedAt)}</p>
-        <div className="mx-auto mt-5 grid max-w-sm grid-cols-4 text-center">
+        <div className="mx-auto mt-5 grid max-w-sm grid-cols-3 text-center">
           <Stat label="Saved" value={data.savedPosts.length} />
-          <Stat label="Following" value={data.following.length} />
           <Stat label="Ratings" value={data.ratings.length} />
           <Stat label="Orders" value={data.orders} />
         </div>
@@ -93,7 +90,7 @@ export function MeScreen() {
         </div>
       </section>
 
-      <div role="tablist" className="sticky top-14 z-20 mt-3 grid grid-cols-3 border-b border-line bg-canvas/95 backdrop-blur lg:top-0">
+      <div role="tablist" className="sticky top-14 z-20 mt-3 grid grid-cols-2 border-b border-line bg-canvas/95 backdrop-blur lg:top-0">
         {tabs.map((item) => (
           <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} onClick={() => setTab(item.id)} className={cn("press relative flex h-12 items-center justify-center gap-1.5 text-[13px] font-semibold", tab === item.id ? "text-ink" : "text-muted hover:text-ink")}>
             {item.label} <span className="text-xs font-medium text-muted">{item.count}</span>
@@ -116,15 +113,6 @@ export function MeScreen() {
             <EmptyState icon="bookmark" title="No saved posts" body="Tap the bookmark under a post to keep it in Saved." />
           )
         ) : null}
-        {tab === "following" ? (
-          data.following.length ? (
-            <div className="grid grid-cols-4 gap-2 sm:gap-3">
-              {data.following.map((profile) => <ProfileCard key={profile.id} profile={profile} />)}
-            </div>
-          ) : (
-            <EmptyState icon="user" title="Not following anyone" body="Follow a profile and it will appear here." />
-          )
-        ) : null}
         {tab === "ratings" ? (
           data.ratings.length ? (
             <div className="space-y-2.5">
@@ -144,7 +132,7 @@ export function MeScreen() {
               ))}
             </div>
           ) : (
-            <EmptyState icon="ratings" title="No ratings given" body="After a hook accepts your order you can rate her from her profile." />
+            <EmptyState icon="ratings" title="No ratings given" body="After a hook accepts your order you can rate them from their profile." />
           )
         ) : null}
       </div>
