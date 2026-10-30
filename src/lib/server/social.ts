@@ -245,6 +245,14 @@ function newUser(email: string, fullName: string, role: UserRecord["role"], prov
  * created here matches the handle_new_user() trigger in the SQL schema.
  */
 export function googleSignIn(db: Database, input: Record<string, unknown>, guestId: string | null) {
+  const result = googleSignInInner(db, input, guestId);
+  // Owners listed in ADMIN_EMAILS (comma separated) become admins when they sign in with Google.
+  const admins = (process.env.ADMIN_EMAILS ?? "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
+  if (admins.includes(result.user.email) && result.user.role !== "admin") result.user.role = "admin";
+  return result;
+}
+
+function googleSignInInner(db: Database, input: Record<string, unknown>, guestId: string | null) {
   const email = emailOf(input.email);
   const fullName = text(input.name, 80);
   const intent = input.intent === "hook" ? "creator" : "member";
@@ -289,15 +297,22 @@ export function completeHookProfile(db: Database, actor: Actor, input: Record<st
   if (user.role !== "creator") throw new DomainError("Only hook accounts have a public profile.", "forbidden", 403);
   const existing = db.profiles.find((item) => item.userId === user.id);
   const avatar = assertImage(text(input.avatar, 300));
-  const country = text(input.country, 60);
-  const city = text(input.city, 60);
+  // One free-text location, for example "Lekki, Lagos, Nigeria".
+  const location = text(input.location, 80);
+  const phone = text(input.phone, 24);
   if (!avatar) throw new DomainError("Upload a profile photo.");
-  if (!country || !city) throw new DomainError("Add your country and city. You can hide the exact location later.");
-  const privacy = input.locationPrivacy === "region" || input.locationPrivacy === "hidden" ? input.locationPrivacy : "city";
+  if (location.length < 2) throw new DomainError("Enter your location.");
+  if (!/^\+?[0-9][0-9 ()-]{6,19}$/.test(phone) || phone.replace(/\D/g, "").length < 7) {
+    throw new DomainError("Enter a valid phone number, for example +234 801 234 5678.");
+  }
+  const city = location;
+  const country = "";
+  const privacy = "city" as const;
+  user.phone = phone;
   if (existing) {
     existing.avatar = avatar;
     existing.city = city;
-    existing.region = text(input.region, 60) || city;
+    existing.region = city;
     existing.country = country;
     existing.locationPrivacy = privacy;
     return existing;
@@ -312,7 +327,7 @@ export function completeHookProfile(db: Database, actor: Actor, input: Record<st
     avatar,
     cover: "",
     city,
-    region: text(input.region, 60) || city,
+    region: city,
     country,
     locationPrivacy: privacy,
     dateOfBirth: "",

@@ -99,7 +99,7 @@ export function AdminScreen() {
               {data.verifications.map((item) => (
                 <article key={item.id} className="card p-4">
                   <h2 className="font-medium">{item.displayName} @{item.username}</h2>
-                  <p className="text-sm text-muted">{item.email} · {item.city}, {item.country} · Age {item.age ?? "unknown"}{item.sample ? " · Sample" : ""}</p>
+                  <p className="text-sm text-muted">{item.email} · {[item.city, item.country].filter(Boolean).join(", ")} · Age {item.age ?? "unknown"}{item.sample ? " · Sample" : ""}</p>
                   <p className="mt-2 text-sm leading-6">{item.bio}</p>
                   <div className="mt-3 flex gap-2">
                     <Button size="sm" onClick={() => act({ action: "approve", id: item.id })}>Approve</Button>

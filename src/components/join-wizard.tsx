@@ -120,9 +120,8 @@ function HookFlow({ signedRole, profileId, username }: { signedRole: string; pro
   const { refresh } = usePlatform();
   const [photoDone, setPhotoDone] = useState(false);
   const [avatar, setAvatar] = useState("");
-  const [country, setCountry] = useState("");
-  const [city, setCity] = useState("");
-  const [privacy, setPrivacy] = useState<"city" | "region" | "hidden">("city");
+  const [location, setLocation] = useState("");
+  const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [created, setCreated] = useState<string | null>(null);
@@ -145,8 +144,12 @@ function HookFlow({ signedRole, profileId, username }: { signedRole: string; pro
   }
 
   async function finish() {
-    if (!country.trim() || !city.trim()) {
-      setError("Add your country and city. You can hide them from your profile.");
+    if (location.trim().length < 2) {
+      setError("Enter your location.");
+      return;
+    }
+    if (phone.replace(/\D/g, "").length < 7) {
+      setError("Enter a valid phone number.");
       return;
     }
     setBusy(true);
@@ -154,7 +157,7 @@ function HookFlow({ signedRole, profileId, username }: { signedRole: string; pro
     try {
       const result = await api<{ username: string }>("/api/auth/hook-profile", {
         method: "POST",
-        body: JSON.stringify({ avatar, country, city, locationPrivacy: privacy }),
+        body: JSON.stringify({ avatar, location, phone }),
       });
       setCreated(result.username);
       await refresh();
@@ -241,16 +244,13 @@ function HookFlow({ signedRole, profileId, username }: { signedRole: string; pro
       {step === 2 ? (
         <form className="mt-6" onSubmit={(event) => { event.preventDefault(); finish(); }}>
           <h1 className="text-2xl font-semibold tracking-tight">Where are you based?</h1>
-          <p className="mt-1.5 text-sm leading-6 text-muted">Exact addresses are never shown. Choose how much of this appears on your profile.</p>
+          <p className="mt-1.5 text-sm leading-6 text-muted">Type your location in your own words. Exact addresses are never shown.</p>
           <div className="mt-5 space-y-3.5">
-            <Field label="Country"><input className={controlClass} value={country} onChange={(event) => setCountry(event.target.value)} autoComplete="country-name" /></Field>
-            <Field label="City"><input className={controlClass} value={city} onChange={(event) => setCity(event.target.value)} autoComplete="address-level2" /></Field>
-            <Field label="What visitors can see">
-              <select className={controlClass} value={privacy} onChange={(event) => setPrivacy(event.target.value as typeof privacy)}>
-                <option value="city">City and country</option>
-                <option value="region">Region only</option>
-                <option value="hidden">Hide location</option>
-              </select>
+            <Field label="Your location">
+              <input className={controlClass} value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Lekki, Lagos, Nigeria" autoComplete="off" autoFocus />
+            </Field>
+            <Field label="Phone number" hint="Private. Only used by Daylight to reach you. It is never shown on your profile.">
+              <input type="tel" inputMode="tel" className={controlClass} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+234 801 234 5678" autoComplete="tel" />
             </Field>
           </div>
           {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}

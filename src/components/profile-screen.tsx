@@ -107,7 +107,7 @@ export function ProfileScreen({ username, initialTab = "posts" }: { username: st
         <p className="text-sm text-muted">@{profile.username}</p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
           {profile.sample ? <Tag tone="muted">Sample profile</Tag> : null}
-          <Tag tone="muted"><Icon name="pin" size={11} /> {profile.cityLabel}{profile.cityLabel === "Location private" ? "" : `, ${profile.country}`}</Tag>
+          <Tag tone="muted"><Icon name="pin" size={11} /> {profile.cityLabel}{profile.cityLabel === "Location private" || !profile.country ? "" : `, ${profile.country}`}</Tag>
           {profile.age ? <Tag tone="muted">{profile.age}</Tag> : null}
         </div>
 
@@ -177,7 +177,7 @@ export function ProfileScreen({ username, initialTab = "posts" }: { username: st
         {tab === "about" ? (
           <div className="card divide-y divide-line">
             <AboutRow icon="document" title="Bio" body={profile.bio || "No bio yet."} />
-            <AboutRow icon="pin" title="Location" body={profile.cityLabel === "Location private" ? "Kept private by this profile." : `${profile.cityLabel}, ${profile.country}. Exact addresses are never published.`} />
+            <AboutRow icon="pin" title="Location" body={profile.cityLabel === "Location private" ? "Kept private by this profile." : `${[profile.cityLabel, profile.country].filter(Boolean).join(", ")}. Exact addresses are never published.`} />
             <AboutRow icon="calendar" title="Joined" body={formatLongDate(profile.joinedAt)} />
             <AboutRow icon="shieldBold" title="Verification" body={profile.verified ? "Age and identity verified by Daylight." : "Waiting for age and identity verification."} />
             <AboutRow icon="star" title="Rating" body={profile.reviewCount > 0 ? `${profile.rating?.toFixed(1)} average from ${profile.reviewCount} verified order${profile.reviewCount === 1 ? "" : "s"}.` : "No ratings yet."} />
