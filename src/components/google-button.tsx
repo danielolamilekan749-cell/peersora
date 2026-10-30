@@ -6,6 +6,9 @@ import { api } from "@/lib/api";
 import { supabaseBrowser, supabaseEnabled } from "@/lib/supabase-browser";
 import { Button, controlClass, Dialog, Field } from "@/components/ui";
 
+// The name-and-email stand-in exists only for local development without Supabase.
+const previewAllowed = process.env.NODE_ENV !== "production";
+
 export const GOOGLE_INTENT_KEY = "daylight.google";
 
 export type GoogleResult = { role: string; created: boolean; hasProfile: boolean };
@@ -51,6 +54,15 @@ export function GoogleButton({
         GOOGLE_INTENT_KEY,
         JSON.stringify({ intent, next: new URLSearchParams(window.location.search).get("next") ?? "" }),
       );
+      // A provider that is switched off in Supabase would otherwise show a raw JSON error page.
+      const settings = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/settings`, {
+        headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" },
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .catch(() => null);
+      if (settings && settings.external?.google === false) {
+        throw new Error("Google sign-in is not switched on yet. Enable it in Supabase under Authentication, Providers, Google.");
+      }
       const { error: oauthError } = await supabaseBrowser().auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: `${window.location.origin}/auth/callback`, queryParams: { prompt: "select_account" } },
@@ -83,13 +95,17 @@ export function GoogleButton({
     <>
       <button
         type="button"
-        onClick={() => (supabaseEnabled ? startGoogle() : setOpen(true))}
+        onClick={() => {
+          if (supabaseEnabled) startGoogle();
+          else if (previewAllowed) setOpen(true);
+          else setError("Google sign-in is not configured on this site yet.");
+        }}
         disabled={redirecting}
         className="press inline-flex h-12 w-full items-center justify-center gap-3 rounded-full bg-white text-[15px] font-semibold text-ink ring-1 ring-line shadow-card hover:bg-canvas disabled:opacity-70"
       >
         <GoogleMark /> {redirecting ? "Opening Google" : label}
       </button>
-      {supabaseEnabled && error ? <p className="mt-3 text-center text-sm text-danger">{error}</p> : null}
+      {error ? <p className="mt-3 text-center text-sm text-danger">{error}</p> : null}
       <p className="mt-3 text-center text-[11px] leading-5 text-muted">
         By continuing you confirm you are 18 or over and accept the{" "}
         <Link href="/terms" className="font-medium text-plum">Terms</Link> and{" "}
