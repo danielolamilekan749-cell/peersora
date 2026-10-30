@@ -253,6 +253,15 @@ export function googleSignIn(db: Database, input: Record<string, unknown>, guest
     if (existing.status === "suspended") {
       throw new DomainError("This account is suspended. You can submit an appeal from the sign in page.", "suspended", 403);
     }
+    if (intent === "creator" && existing.role === "member") {
+      const busy =
+        db.orders.some((order) => order.userId === existing.id) ||
+        db.reviews.some((review) => review.authorId === existing.id);
+      if (busy) {
+        throw new DomainError("This Google account is already a user account. Use a different Google account to join as a hook.", "role", 409);
+      }
+      existing.role = "creator";
+    }
     existing.lastActiveAt = now();
     claimGuest(db, guestId, existing.id);
     return { user: existing, created: false };
@@ -514,9 +523,7 @@ export function setCommentHidden(db: Database, actor: Actor, commentId: string, 
 }
 
 export function blockProfile(db: Database, actor: Actor, profileId: string) {
-  if (!actor.actorId || actor.actorId === "anon") {
-    throw new DomainError("Sign in to block profiles.", "auth_required", 401);
-  }
+  requireUser(db, actor);
   const profile = findProfile(db, profileId);
   if (profile.userId && profile.userId === actor.user?.id) throw new DomainError("You cannot block yourself.");
   db.blocks = db.blocks.filter((block) => !(block.ownerId === actor.actorId && block.profileId === profileId));
@@ -535,6 +542,7 @@ export function unblock(db: Database, actor: Actor, blockId: string) {
 }
 
 export function reportContent(db: Database, actor: Actor, input: Record<string, unknown>) {
+  requireUser(db, actor);
   const reason = text(input.reason, 80);
   const details = text(input.details, 500);
   const targetType = text(input.targetType, 20);

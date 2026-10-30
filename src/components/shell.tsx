@@ -107,7 +107,13 @@ function PublicChrome({ children, role }: { children: ReactNode; role: string | 
           ) : isHook ? (
             <RailLink href="/dashboard/posts?new=1" label="New post" active={false} icon="add" activeIcon="addBold" />
           ) : null}
-          <RailLink href={accountHref} label={signedIn ? "Profile" : "Sign in"} active={accountActive} icon="user" activeIcon="userBold" />
+          {signedIn ? (
+            <RailLink href={accountHref} label="Profile" active={accountActive} icon="user" activeIcon="userBold" />
+          ) : (
+            <button type="button" aria-label="Profile" title="Profile" onClick={askJoin} className="press grid h-12 w-12 place-items-center rounded-2xl text-ink/80 hover:bg-canvas hover:text-ink">
+              <Icon name="user" size={26} />
+            </button>
+          )}
         </nav>
         <div className="relative">
           <button
@@ -168,7 +174,11 @@ function PublicChrome({ children, role }: { children: ReactNode; role: string | 
           {!signedIn ? <TabButton label="Join" icon="addCircle" onClick={askJoin} /> : null}
           {isHook ? <Tab href="/dashboard/posts?new=1" label="Post" active={false} icon="addCircle" activeIcon="addCircle" accent /> : null}
           <Tab href="/saved" label="Saved" active={isSaved} icon="bookmark" activeIcon="bookmarkBold" />
-          <Tab href={accountHref} label={signedIn ? "Profile" : "Sign in"} active={accountActive} icon="user" activeIcon="userBold" />
+          {signedIn ? (
+            <Tab href={accountHref} label="Profile" active={accountActive} icon="user" activeIcon="userBold" />
+          ) : (
+            <TabButton label="Profile" icon="user" onClick={askJoin} muted />
+          )}
         </div>
       </nav>
     </div>
@@ -209,10 +219,10 @@ function Tab({ href, label, active, icon, activeIcon, badge = 0, accent = false 
   );
 }
 
-function TabButton({ label, icon, onClick }: { label: string; icon: IconName; onClick: () => void }) {
+function TabButton({ label, icon, onClick, muted = false }: { label: string; icon: IconName; onClick: () => void; muted?: boolean }) {
   return (
-    <button type="button" onClick={onClick} className="relative flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-plum">
-      <Icon name={icon} size={28} />
+    <button type="button" onClick={onClick} className={cn("relative flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium", muted ? "text-ink/75" : "text-plum")}>
+      <Icon name={icon} size={muted ? 24 : 28} />
       {label}
     </button>
   );

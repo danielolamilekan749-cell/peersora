@@ -21,7 +21,19 @@ const hookSteps: { label: string; icon: IconName }[] = [
 export function JoinFlow() {
   const params = useSearchParams();
   const kind = params.get("as");
-  const { viewer } = usePlatform();
+  const { viewer, loading } = usePlatform();
+
+  if (loading && (kind === "hook" || kind === "user")) {
+    return (
+      <Shell>
+        <div className="space-y-3" aria-busy>
+          <div className="animate-pulse bg-line/80 h-12 w-12 rounded-2xl" />
+          <div className="animate-pulse bg-line/80 h-7 w-2/3 rounded-lg" />
+          <div className="animate-pulse bg-line/80 h-12 w-full rounded-full" />
+        </div>
+      </Shell>
+    );
+  }
 
   if (kind === "hook") return <HookFlow signedRole={viewer?.role ?? "guest"} profileId={viewer?.profileId ?? null} username={viewer?.username ?? null} />;
   if (kind === "user") return <UserFlow signedRole={viewer?.role ?? "guest"} />;

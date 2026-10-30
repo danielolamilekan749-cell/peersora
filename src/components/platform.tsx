@@ -91,6 +91,11 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
         toast("Just a moment.");
         return false;
       }
+      if (viewer.role === "guest") {
+        setAuthMessage("Join Daylight to like, follow, save, comment, or report.");
+        setJoinOpen(true);
+        return false;
+      }
       try {
         const data = await api<{ viewer: ViewerState }>("/api/social", {
           method: "POST",
