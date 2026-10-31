@@ -19,7 +19,6 @@ import type {
   GivenRating,
   ViewerState,
 } from "@/lib/types";
-import { hashPassword, verifyPassword } from "@/lib/server/auth";
 import { DomainError } from "@/lib/server/errors";
 
 export type Actor = {
@@ -55,12 +54,6 @@ function emailOf(value: unknown) {
     throw new DomainError("Enter a valid email address.");
   }
   return email;
-}
-
-function assertPassword(password: string) {
-  if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-    throw new DomainError("Use at least 8 characters with a letter and a number.");
-  }
 }
 
 function assertImage(url: string) {
@@ -210,13 +203,12 @@ function uniqueUsername(db: Database, seed: string) {
   return candidate;
 }
 
-function newUser(email: string, fullName: string, role: UserRecord["role"], provider: "password" | "google", avatar = ""): UserRecord {
-  const hashed = hashPassword(randomUUID());
+function newUser(email: string, fullName: string, role: UserRecord["role"], provider: "password" | "google", avatar = "", id: string = randomUUID()): UserRecord {
   return {
-    id: randomUUID(),
+    id,
     email,
-    passwordHash: hashed.hash,
-    passwordSalt: hashed.salt,
+    passwordHash: "",
+    passwordSalt: "",
     role,
     fullName,
     phone: "",
@@ -253,10 +245,14 @@ function googleSignInInner(db: Database, input: Record<string, unknown>, guestId
   const email = emailOf(input.email);
   const fullName = text(input.name, 80);
   const intent = input.intent === "hook" ? "creator" : "member";
-  const existing = db.users.find((item) => item.email === email && item.status !== "deleted");
+  const authId = typeof input.id === "string" ? input.id : "";
+  if (db.users.some((item) => item.id === authId && item.status === "deleted")) {
+    throw new DomainError("This account was deleted. Use a different Google account.", "deleted", 403);
+  }
+  const existing = db.users.find((item) => (item.id === authId || item.email === email) && item.status !== "deleted");
   if (existing) {
     if (existing.status === "suspended") {
-      throw new DomainError("This account is suspended. You can submit an appeal from the sign in page.", "suspended", 403);
+      throw new DomainError("This account is suspended. Contact support to appeal.", "suspended", 403);
     }
     if (intent === "creator" && existing.role === "member") {
       const busy =
@@ -273,7 +269,7 @@ function googleSignInInner(db: Database, input: Record<string, unknown>, guestId
   }
   if (input.adult !== true) throw new DomainError("Confirm that you are 18 or over to continue.", "age", 400);
   if (fullName.length < 2) throw new DomainError("Enter the name on your Google account.");
-  const user = newUser(email, fullName, intent, "google");
+  const user = newUser(email, fullName, intent, "google", text(input.avatar, 300), authId || undefined);
   db.users.push(user);
   claimGuest(db, guestId, user.id);
   notify(
@@ -357,50 +353,6 @@ export function completeHookProfile(db: Database, actor: Actor, input: Record<st
   );
   audit(db, user.id, "hook-profile", "profile", profile.id);
   return profile;
-}
-
-export function login(db: Database, emailRaw: unknown, passwordRaw: unknown, guestId: string | null) {
-  const email = text(emailRaw, 120).toLowerCase();
-  const password = text(passwordRaw, 80);
-  const user = db.users.find((item) => item.email === email && item.status !== "deleted");
-  if (!user || !verifyPassword(password, user.passwordHash, user.passwordSalt)) {
-    throw new DomainError("Those details do not match an account.", "auth", 401);
-  }
-  if (user.status === "suspended") {
-    throw new DomainError(
-      "This account is suspended. You can submit an appeal from this page.",
-      "suspended",
-      403,
-    );
-  }
-  user.lastActiveAt = now();
-  const profile = db.profiles.find((item) => item.userId === user.id);
-  if (profile) profile.lastActiveAt = user.lastActiveAt;
-  claimGuest(db, guestId, user.id);
-  return user;
-}
-
-export function submitAppeal(db: Database, input: Record<string, unknown>) {
-  const email = text(input.email, 120).toLowerCase();
-  const password = text(input.password, 80);
-  const message = text(input.message, 800);
-  const user = db.users.find((item) => item.email === email);
-  if (!user || !verifyPassword(password, user.passwordHash, user.passwordSalt)) {
-    throw new DomainError("Those details do not match an account.", "auth", 401);
-  }
-  if (user.status !== "suspended") throw new DomainError("This account is not suspended.");
-  if (message.length < 20) throw new DomainError("Describe your appeal in at least 20 characters.");
-  if (db.appeals.some((appeal) => appeal.userId === user.id && appeal.status === "open")) {
-    throw new DomainError("An appeal is already waiting for review.");
-  }
-  db.appeals.unshift({
-    id: randomUUID(),
-    userId: user.id,
-    message,
-    status: "open",
-    createdAt: now(),
-  });
-  audit(db, user.id, "appeal", "user", user.id);
 }
 
 export function openProfile(db: Database, actor: Actor, username: string) {
@@ -845,17 +797,6 @@ export function updateAccount(db: Database, actor: Actor, input: Record<string, 
     const prefs = input.notificationPrefs as NotificationPrefs;
     user.notificationPrefs = { ...user.notificationPrefs, ...prefs };
   }
-  if (input.currentPassword || input.nextPassword) {
-    if (!verifyPassword(text(input.currentPassword, 80), user.passwordHash, user.passwordSalt)) {
-      throw new DomainError("Current password is incorrect.", "auth", 401);
-    }
-    const nextPassword = text(input.nextPassword, 80);
-    assertPassword(nextPassword);
-    const hashed = hashPassword(nextPassword);
-    user.passwordHash = hashed.hash;
-    user.passwordSalt = hashed.salt;
-    audit(db, user.id, "password", "user", user.id);
-  }
   const profile = db.profiles.find((item) => item.userId === user.id);
   if (profile && user.role === "creator") {
     if (typeof input.displayName === "string") profile.displayName = text(input.displayName, 40);
@@ -897,9 +838,6 @@ export function updateAccount(db: Database, actor: Actor, input: Record<string, 
     user.email = `deleted+${user.id}@daylight.invalid`;
     user.phone = "";
     user.fullName = "Deleted member";
-    const hashed = hashPassword(randomUUID());
-    user.passwordHash = hashed.hash;
-    user.passwordSalt = hashed.salt;
     if (profile) {
       profile.discoverable = false;
       profile.visibility = "hidden";

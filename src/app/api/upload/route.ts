@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
+import { sessionUserId } from "@/lib/server/http";
 
 const kinds: Record<string, { ext: string; magic: number[] }> = {
   "image/jpeg": { ext: "jpg", magic: [0xff, 0xd8, 0xff] },
@@ -44,6 +45,9 @@ async function uploadToCloudinary(config: Cloudinary, bytes: Buffer, mime: strin
 }
 
 export async function POST(request: Request) {
+  if (!(await sessionUserId())) {
+    return NextResponse.json({ error: "Sign in to upload images." }, { status: 401 });
+  }
   const form = await request.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) {
@@ -68,6 +72,10 @@ export async function POST(request: Request) {
     } catch {
       return NextResponse.json({ error: "Upload failed. Please try again." }, { status: 502 });
     }
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Image uploads are not configured yet." }, { status: 503 });
   }
 
   const directory = path.join(process.cwd(), "public", "uploads");

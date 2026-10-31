@@ -57,8 +57,6 @@ export function SettingsScreen() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [nextPassword, setNextPassword] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [privacy, setPrivacy] = useState<"city" | "region" | "hidden">("city");
 
@@ -136,13 +134,6 @@ export function SettingsScreen() {
             <Button size="sm" variant="outline" onClick={async () => { await api("/api/social", { method: "POST", body: JSON.stringify({ action: "unblock", id: block.id }) }); await load(); }}>Unblock</Button>
           </div>
         ))}
-      </Section>
-      <Section icon="lock" title="Password">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Current password"><input type="password" className={controlClass} value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" /></Field>
-          <Field label="New password"><input type="password" className={controlClass} value={nextPassword} onChange={(event) => setNextPassword(event.target.value)} autoComplete="new-password" /></Field>
-        </div>
-        <Button onClick={() => patch({ currentPassword, nextPassword }, "Password updated")}>Change password</Button>
       </Section>
       <Section icon="warning" title="Account status" body="Deactivating hides your profile but keeps your account. Deleting is permanent.">
         <div className="flex flex-wrap gap-2">

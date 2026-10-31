@@ -1,11 +1,9 @@
-import { readDb } from "@/lib/server/db";
 import { change, handle } from "@/lib/server/http";
 import { dashboard, memberHome, memberSettings, updateAccount } from "@/lib/server/social";
 
 export async function GET(request: Request) {
   const view = new URL(request.url).searchParams.get("view");
-  return handle((ctx) => {
-    const db = readDb();
+  return handle((db, ctx) => {
     if (view === "settings") return memberSettings(db, ctx);
     if (view === "member") return memberHome(db, ctx);
     return dashboard(db, ctx);

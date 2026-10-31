@@ -1,7 +1,14 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import type { Role } from "@/lib/types";
 
-const SECRET = process.env.AUTH_SECRET || "daylight-dev-only-secret-change-me";
+const SECRET = (() => {
+  const configured = process.env.AUTH_SECRET;
+  if (configured && configured.length >= 16) return configured;
+  if (process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build") {
+    throw new Error("AUTH_SECRET is not set. Add a long random value to the Vercel environment variables.");
+  }
+  return "daylight-dev-only-secret-change-me";
+})();
 
 export type SessionPayload = {
   uid: string;

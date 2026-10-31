@@ -46,3 +46,5 @@ next-env.d.ts
 
 # local secret files
 *.env
+
+!.env.example

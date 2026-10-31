@@ -1,9 +1,8 @@
-import { readDb } from "@/lib/server/db";
 import { change, handle } from "@/lib/server/http";
 import { markNotifications, notificationsFor } from "@/lib/server/social";
 
 export async function GET() {
-  return handle((ctx) => notificationsFor(readDb(), ctx));
+  return handle((db, ctx) => notificationsFor(db, ctx));
 }
 
 export async function POST() {

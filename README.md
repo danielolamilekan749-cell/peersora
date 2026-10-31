@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Daylight
 
-## Getting Started
+Adults-only (18+) discovery platform built with Next.js. Sign-in is Google only, images are stored on Cloudinary and all data lives in Supabase.
 
-First, run the development server:
+## Run locally
 
 ```bash
+npm install
+cp .env.example .env.local   # then fill the values in
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Without `SUPABASE_SERVICE_ROLE_KEY`, local development stores data in `data/local-db.json` instead of Supabase.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Set up Supabase (once)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Run these files in order in Supabase -> SQL Editor:
 
-## Learn More
+1. `supabase/migrations/0001_daylight.sql`
+2. `supabase/migrations/0002_real_data_only.sql`
+3. `supabase/migrations/0003_server_storage.sql`
 
-To learn more about Next.js, take a look at the following resources:
+Then:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Authentication -> Providers -> Google: enable it with your Google client ID and secret.
+- Authentication -> URL Configuration: set the Site URL to your live address and add `https://YOUR-DOMAIN/auth/callback` and `http://localhost:3000/auth/callback` to the redirect URLs.
+- In Google Cloud Console, add your live domain to the authorized JavaScript origins.
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Add these environment variables, then redeploy (clear the build cache, `NEXT_PUBLIC_*` values are baked in at build time):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Variable | Value |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (public) key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role key. Server only, never expose it. |
+| `AUTH_SECRET` | Long random string used to sign login cookies |
+| `CLOUDINARY_URL` | `cloudinary://API_KEY:API_SECRET@CLOUD_NAME` |
+| `ADMIN_EMAILS` | Comma separated Google emails that become admins |

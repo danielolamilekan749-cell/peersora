@@ -10,10 +10,11 @@ import type { Actor } from "@/lib/server/social";
 
 export type Ctx = Actor & { setGuest: string | null };
 
-export async function getCtx(): Promise<Ctx> {
-  const jar = await cookies();
+type Jar = Awaited<ReturnType<typeof cookies>>;
+
+/** Who is making this request, worked out from the cookie and the loaded data. */
+function ctxFrom(db: Database, jar: Jar): Ctx {
   const session = readSession(jar.get("dl_session")?.value);
-  const db = readDb();
   const record = session
     ? db.users.find((user) => user.id === session.uid && user.status === "active") ?? null
     : null;
@@ -25,10 +26,16 @@ export async function getCtx(): Promise<Ctx> {
   }
   return {
     user: record,
-    guestId: record ? guestId : guestId,
+    guestId,
     actorId: record ? record.id : guestId || "anon",
     setGuest: record ? null : setGuest,
   };
+}
+
+/** The signed-in user for an API route that does not load the database itself. */
+export async function sessionUserId() {
+  const jar = await cookies();
+  return readSession(jar.get("dl_session")?.value)?.uid ?? null;
 }
 
 export function jsonError(error: unknown) {
@@ -39,21 +46,39 @@ export function jsonError(error: unknown) {
   return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
 }
 
-export async function handle(run: (ctx: Ctx) => Promise<unknown> | unknown) {
+function finish(ctx: Ctx, data: unknown) {
+  const response = NextResponse.json(data ?? { ok: true });
+  if (ctx.setGuest) response.cookies.set("dl_guest", ctx.setGuest, cookieOptions);
+  return response;
+}
+
+/** Read-only request: loads the data once and answers from it. */
+export async function handle(run: (db: Database, ctx: Ctx) => Promise<unknown> | unknown) {
   try {
-    const ctx = await getCtx();
-    const data = await run(ctx);
-    const response = NextResponse.json(data ?? { ok: true });
-    if (ctx.setGuest) response.cookies.set("dl_guest", ctx.setGuest, cookieOptions);
-    return response;
+    const jar = await cookies();
+    const db = await readDb();
+    const ctx = ctxFrom(db, jar);
+    return finish(ctx, await run(db, ctx));
   } catch (error) {
     unstable_rethrow(error);
     return jsonError(error);
   }
 }
 
+/** Request that changes data: only the rows it touched are saved. */
 export async function change(run: (db: Database, ctx: Ctx) => unknown) {
-  return handle(async (ctx) => mutate((db) => run(db, ctx)));
+  try {
+    const jar = await cookies();
+    let ctx: Ctx | null = null;
+    const data = await mutate((db) => {
+      ctx = ctxFrom(db, jar);
+      return run(db, ctx);
+    });
+    return finish(ctx as unknown as Ctx, data);
+  } catch (error) {
+    unstable_rethrow(error);
+    return jsonError(error);
+  }
 }
 
 export function attachSession(response: NextResponse, user: { id: string; role: Role }) {

@@ -1,10 +1,9 @@
 import { DomainError } from "@/lib/server/errors";
-import { readDb } from "@/lib/server/db";
 import { change, handle } from "@/lib/server/http";
 import { listOrders, placeOrder, respondOrder } from "@/lib/server/social";
 
 export async function GET() {
-  return handle((ctx) => listOrders(readDb(), ctx));
+  return handle((db, ctx) => listOrders(db, ctx));
 }
 
 export async function POST(request: Request) {
