@@ -184,7 +184,7 @@ function HookFlow({ signedRole, profileId, username }: { signedRole: string; pro
           <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-rose text-plum"><Icon name="check" size={36} /></span>
           <h1 className="mt-4 text-2xl font-semibold tracking-tight">Your hook profile is ready</h1>
           <p className="mt-2 text-sm leading-6 text-muted">
-            It becomes discoverable once age and identity verification is approved. You can start posting right away.
+            It is live now. Add your first post so people can find you.
           </p>
           <div className="mt-6 grid gap-2">
             <Link href="/dashboard/posts?new=1" className="press inline-flex h-11 items-center justify-center gap-2 rounded-full bg-plum text-sm font-semibold text-white"><Icon name="galleryAdd" size={18} /> Add your first post</Link>

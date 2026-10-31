@@ -96,16 +96,16 @@ export function OverviewScreen() {
     <div>
       <PageTitle
         title={`Hello, ${profile.displayName.split(" ")[0]}`}
-        subtitle={`Profile is ${profile.discoverable && approved ? "discoverable" : "private"}.`}
+        subtitle={`Your profile is ${profile.discoverable ? "live" : "hidden"}.`}
         action={
           <Tag tone={approved ? "success" : "muted"} className="px-2.5 py-1 text-xs">
-            <Icon name={approved ? "shieldBold" : "clock"} size={13} /> {approved ? "Verified" : `Verification ${profile.verification}`}
+            <Icon name={approved ? "shieldBold" : "clock"} size={13} /> {approved ? "Verified" : profile.discoverable ? "Live" : "Hidden"}
           </Tag>
         }
       />
-      {!approved ? (
+      {!profile.discoverable ? (
         <p className="mt-4 flex items-start gap-2.5 rounded-2xl bg-rose px-4 py-3 text-[13px] leading-5 text-plum">
-          <Icon name="info" size={18} className="mt-0.5 shrink-0" /> Your profile stays out of discovery until moderation approves the adult and identity check.
+          <Icon name="info" size={18} className="mt-0.5 shrink-0" /> Your profile is hidden, so people cannot see it or your posts. Turn on discovery in My profile, or contact support if moderation hid it.
         </p>
       ) : null}
       <section className="card mt-5 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5">
@@ -210,7 +210,7 @@ export function ProfileEditor() {
 
   return (
     <div>
-      <PageTitle title="My profile" subtitle="What visitors see once your profile is approved." />
+      <PageTitle title="My profile" subtitle="What visitors see on your profile." />
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_320px] lg:items-start">
         <div className="space-y-4">
           <section className="card space-y-4 p-5">
@@ -258,14 +258,14 @@ export function ProfileEditor() {
             <label className="flex items-center justify-between gap-3 text-sm">
               <span>
                 <span className="block font-medium">Public profile</span>
-                <span className="block text-xs text-muted">Visible by link once approved.</span>
+                <span className="block text-xs text-muted">Anyone with the link can open your profile.</span>
               </span>
               <Switch checked={form.visibility === "public"} onChange={(event) => setForm({ ...form, visibility: event.target.checked ? "public" : "hidden" })} />
             </label>
             <label className="flex items-center justify-between gap-3 text-sm">
               <span>
                 <span className="block font-medium">Appear in discovery</span>
-                <span className="block text-xs text-muted">Listed in the feed and explore after verification.</span>
+                <span className="block text-xs text-muted">Listed in the feed and explore.</span>
               </span>
               <Switch checked={form.discoverable} onChange={(event) => setForm({ ...form, discoverable: event.target.checked })} />
             </label>

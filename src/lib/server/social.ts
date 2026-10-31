@@ -324,10 +324,12 @@ export function completeHookProfile(db: Database, actor: Actor, input: Record<st
     country,
     locationPrivacy: privacy,
     dateOfBirth: "",
-    ageVerified: false,
+    // Hooks confirm they are 18 or over when joining, so the profile is live straight away.
+    // Moderators can add the verified badge later, or hide the profile.
+    ageVerified: true,
     identityVerified: false,
-    visibility: "hidden",
-    discoverable: false,
+    visibility: "public",
+    discoverable: true,
     featured: false,
     presenceHint: null,
     joinedAt: now(),
@@ -347,9 +349,9 @@ export function completeHookProfile(db: Database, actor: Actor, input: Record<st
     db,
     user.id,
     "verification",
-    "Profile saved privately",
-    "Your profile becomes discoverable after age and identity verification is approved. You can start posting now.",
-    "/dashboard",
+    "Your profile is live",
+    "People can now find you and see your posts. Add your first post to get started.",
+    "/dashboard/posts?new=1",
   );
   audit(db, user.id, "hook-profile", "profile", profile.id);
   return profile;
@@ -817,8 +819,8 @@ export function updateAccount(db: Database, actor: Actor, input: Record<string, 
     if (input.visibility === "public" || input.visibility === "hidden") profile.visibility = input.visibility;
     if (input.discoverable === false) profile.discoverable = false;
     if (input.discoverable === true) {
-      if (!profile.ageVerified || !profile.identityVerified || user.deactivated) {
-        throw new DomainError("Your profile can be discovered after verification is approved.");
+      if (!profile.ageVerified || user.deactivated) {
+        throw new DomainError("Your profile cannot be listed right now.");
       }
       profile.discoverable = true;
       profile.visibility = "public";
@@ -1011,10 +1013,11 @@ export function adminAct(db: Database, actor: Actor, input: Record<string, unkno
       profile.identityVerified = true;
       profile.discoverable = true;
       profile.visibility = "public";
-      notify(db, verification.userId, "verification", "Profile approved", "Your profile can now be discovered.", `/profile/${profile.username}`);
+      notify(db, verification.userId, "verification", "You are verified", "Your profile now shows the verified badge.", `/profile/${profile.username}`);
     } else {
       profile.discoverable = false;
-      notify(db, verification.userId, "verification", "Profile not approved", verification.note || "Update your profile and wait for another review.", "/dashboard");
+      profile.visibility = "hidden";
+      notify(db, verification.userId, "verification", "Profile hidden by moderation", verification.note || "Update your profile and contact support to have it reviewed again.", "/dashboard");
     }
     audit(db, admin.id, action, "verification", verification.id, verification.note);
     return;

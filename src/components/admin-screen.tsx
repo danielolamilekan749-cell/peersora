@@ -95,7 +95,7 @@ export function AdminScreen() {
           ) : null}
           {tab === "Verification" ? (
             <div className="space-y-3">
-              {data.verifications.length === 0 ? <EmptyState title="No pending requests" body="New hook profiles appear here until you approve or reject them." /> : null}
+              {data.verifications.length === 0 ? <EmptyState title="No pending requests" body="New hook profiles are live straight away. Approve to add the verified badge, or reject to hide the profile." /> : null}
               {data.verifications.map((item) => (
                 <article key={item.id} className="card p-4">
                   <h2 className="font-medium">{item.displayName} @{item.username}</h2>

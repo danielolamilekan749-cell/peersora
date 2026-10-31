@@ -20,6 +20,7 @@ Run these files in order in Supabase -> SQL Editor:
 2. `supabase/migrations/0002_real_data_only.sql`
 3. `supabase/migrations/0003_server_storage.sql`
 4. `supabase/migrations/0004_lock_down.sql`
+5. `supabase/migrations/0005_hooks_live.sql`
 
 Then run `supabase/health_check.sql`; every line should say `true`.
 

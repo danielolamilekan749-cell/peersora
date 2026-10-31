@@ -158,7 +158,7 @@ function PublicChrome({ children, role }: { children: ReactNode; role: string | 
       <div className="mx-auto w-full max-w-6xl px-3 pb-24 sm:px-4 lg:min-h-screen lg:max-w-[1080px] lg:px-2 lg:pb-16 lg:pt-6">
         {children}
         <footer className="px-1 py-8 text-center text-[11px] leading-5 text-muted">
-          <p>Adults 18+ only. Every hook is reviewed before going live.</p>
+          <p>Adults 18+ only. Profiles can be reported and are moderated.</p>
           <p className="mt-2 flex flex-wrap justify-center gap-x-3">
             <Link href="/guidelines" className="hover:text-ink">Guidelines</Link>
             <Link href="/terms" className="hover:text-ink">Terms</Link>

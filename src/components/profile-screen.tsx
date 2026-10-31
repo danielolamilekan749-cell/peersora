@@ -77,7 +77,7 @@ export function ProfileScreen({ username, initialTab = "posts" }: { username: st
       {hiddenFromPublic ? (
         <p className="mb-3 flex items-start gap-2 rounded-2xl bg-white px-4 py-3 text-[13px] leading-5 text-muted ring-1 ring-line">
           <Icon name="lock" size={18} className="mt-0.5 shrink-0 text-plum" />
-          Only you can see this profile until age and identity verification is approved. You can already add posts.
+          Only you can see this profile right now. Turn on discovery in My profile to go live.
         </p>
       ) : null}
       <section className="card relative overflow-hidden px-4 pb-5 pt-7 text-center">
