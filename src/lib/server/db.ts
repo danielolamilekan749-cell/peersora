@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types";
+import { DomainError } from "@/lib/server/errors";
 import { DB_VERSION, decodeDatabase, diff, emptyDatabase, snapshot, tableSpecs, type Change, type Row } from "@/lib/server/rows";
 
 export { DB_VERSION };
@@ -98,7 +99,7 @@ function store(): Store {
   if (config) {
     cached = createSupabaseStore(config.url, config.key);
   } else if (process.env.NODE_ENV === "production") {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set. Add it to the Vercel environment variables.");
+    throw new DomainError("The server is not fully set up yet: SUPABASE_SERVICE_ROLE_KEY is missing. Open /api/health to see what is missing.", "config", 503);
   } else {
     cached = createFileStore();
   }
