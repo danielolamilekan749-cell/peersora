@@ -22,13 +22,16 @@ function iconFor(type: string): IconName {
 }
 
 export function NotificationsScreen() {
-  const { viewer, askAuth, refresh } = usePlatform();
+  const { viewer, askAuth, refresh, toast } = usePlatform();
   const [items, setItems] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
+  const [markingRead, setMarkingRead] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     api<{ items: Note[] }>("/api/notifications")
       .then((data) => setItems(data.items))
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Could not load notifications."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -41,6 +44,9 @@ export function NotificationsScreen() {
         <Skeleton className="h-16" />
       </div>
     );
+  }
+  if (error && viewer?.role !== "guest") {
+    return <EmptyState icon="bell" title="Notifications unavailable" body={error} />;
   }
   if (!viewer || viewer.role === "guest") {
     return (
@@ -59,10 +65,17 @@ export function NotificationsScreen() {
         subtitle={unreadCount > 0 ? `${unreadCount} unread` : "You are caught up"}
         action={
           items.length > 0 ? (
-            <Button variant="outline" size="sm" onClick={async () => {
-              const data = await api<{ items: Note[] }>("/api/notifications", { method: "POST" });
-              setItems(data.items);
-              refresh().catch(() => undefined);
+            <Button variant="outline" size="sm" loading={markingRead} onClick={async () => {
+              setMarkingRead(true);
+              try {
+                const data = await api<{ items: Note[] }>("/api/notifications", { method: "POST" });
+                setItems(data.items);
+                await refresh();
+              } catch (error) {
+                toast(error instanceof Error ? error.message : "Could not mark notifications as read.");
+              } finally {
+                setMarkingRead(false);
+              }
             }}>
               <Icon name="checkLine" size={16} /> Mark all read
             </Button>

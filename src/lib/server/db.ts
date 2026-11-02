@@ -38,8 +38,48 @@ export function createSupabaseStore(url: string, serviceKey: string): Store {
     return rows;
   }
 
+  /** One database round trip when migration 0006 has been run. Null means "not installed". */
+  let bundled: boolean | null = null;
+
+  async function loadBundled() {
+    if (bundled === false) return null;
+    const { data, error } = await client.rpc("app_read");
+    if (error || !data || typeof data !== "object") {
+      bundled = false;
+      return null;
+    }
+    bundled = true;
+    return decodeDatabase(data as Record<string, Row[]>);
+  }
+
+  function fail(table: string, message: string): never {
+    throw new DomainError(`Could not save ${table}: ${message}`.slice(0, 220), "db", 500);
+  }
+
+  async function upsertRows(table: string, keys: string[], rows: Row[]) {
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const batch = rows.slice(i, i + BATCH);
+      const { error } = await client.from(table).upsert(batch, { onConflict: keys.join(",") });
+      if (!error) continue;
+      // Works even before the unique index from 0003 exists.
+      if (!/no unique or exclusion constraint/i.test(error.message)) fail(table, error.message);
+      for (const row of batch) {
+        const inserted = await client.from(table).insert(row);
+        if (!inserted.error) continue;
+        if (inserted.error.code !== "23505") fail(table, inserted.error.message);
+        const patch = Object.fromEntries(Object.entries(row).filter(([column]) => !keys.includes(column)));
+        let update = client.from(table).update(patch);
+        for (const key of keys) update = update.eq(key, row[key] as string);
+        const updated = await update;
+        if (updated.error) fail(table, updated.error.message);
+      }
+    }
+  }
+
   return {
     async load() {
+      const bundledDb = await loadBundled();
+      if (bundledDb) return bundledDb;
       const entries = await Promise.all(
         tableSpecs.map(async (spec) => [spec.table, await readAll(spec.table, spec.order, spec.keys)] as const),
       );
@@ -47,20 +87,13 @@ export function createSupabaseStore(url: string, serviceKey: string): Store {
     },
     async save(_db, changes) {
       // Parents first when adding rows, children first when removing them.
-      for (const change of changes) {
-        for (let i = 0; i < change.upserts.length; i += BATCH) {
-          const { error } = await client
-            .from(change.table)
-            .upsert(change.upserts.slice(i, i + BATCH), { onConflict: change.keys.join(",") });
-          if (error) throw new Error(`Could not save ${change.table}: ${error.message}`);
-        }
-      }
+      for (const change of changes) await upsertRows(change.table, change.keys, change.upserts);
       for (const change of [...changes].reverse()) {
         for (const row of change.deletes) {
           let query = client.from(change.table).delete();
           for (const key of change.keys) query = query.eq(key, row[key] as string);
           const { error } = await query;
-          if (error) throw new Error(`Could not remove from ${change.table}: ${error.message}`);
+          if (error) fail(change.table, error.message);
         }
       }
     },
@@ -106,8 +139,24 @@ function store(): Store {
   return cached;
 }
 
+/** Repeat reads on the same server reuse this for a moment, so a tap does not reload every table. */
+const FRESH_MS = 2000;
+let generation = 0;
+let memory: { db: Database; at: number } | null = null;
+
+function remember(db: Database) {
+  memory = { db: structuredClone(db), at: Date.now() };
+}
+
 export function readDb(): Promise<Database> {
-  return store().load();
+  const seen = generation;
+  if (memory && Date.now() - memory.at < FRESH_MS) return Promise.resolve(structuredClone(memory.db));
+  return store().load().then((db) => {
+    // A save finished while this read was in flight. Keep the saved copy.
+    if (seen !== generation && memory) return structuredClone(memory.db);
+    remember(db);
+    return structuredClone(db);
+  });
 }
 
 let chain: Promise<unknown> = Promise.resolve();
@@ -115,11 +164,13 @@ let chain: Promise<unknown> = Promise.resolve();
 /** Loads the data, runs `fn` on it, then saves whatever `fn` changed. */
 export function mutate<T>(fn: (db: Database) => T): Promise<T> {
   const run = chain.then(async () => {
+    generation += 1;
     const target = store();
     const db = await target.load();
     const before = snapshot(db);
     const result = fn(db);
     await target.save(db, diff(before, db));
+    remember(db);
     return result;
   });
   chain = run.then(
@@ -132,4 +183,6 @@ export function mutate<T>(fn: (db: Database) => T): Promise<T> {
 /** Test hook: swap the storage backend. */
 export function useStore(next: Store | null) {
   cached = next;
+  memory = null;
+  generation += 1;
 }

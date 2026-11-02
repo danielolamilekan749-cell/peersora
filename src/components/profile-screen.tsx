@@ -42,6 +42,7 @@ export function ProfileScreen({ username, initialTab = "posts" }: { username: st
   const [tab, setTab] = useState<TabId>(initialTab);
   const [reportOpen, setReportOpen] = useState(false);
   const [confirmBlock, setConfirmBlock] = useState(false);
+  const [blocking, setBlocking] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -182,7 +183,14 @@ export function ProfileScreen({ username, initialTab = "posts" }: { username: st
       <Dialog open={confirmBlock} title="Block this profile?" onClose={() => setConfirmBlock(false)}>
         <p className="text-sm leading-6 text-muted">You will stop seeing this profile and its posts.</p>
         <div className="mt-4 flex gap-2">
-          <Button variant="danger" className="flex-1" onClick={async () => { await block(profile.id); setConfirmBlock(false); }}>Block</Button>
+          <Button variant="danger" className="flex-1" loading={blocking} onClick={async () => {
+            setBlocking(true);
+            try {
+              if (await block(profile.id)) setConfirmBlock(false);
+            } finally {
+              setBlocking(false);
+            }
+          }}>Block</Button>
           <Button variant="outline" className="flex-1" onClick={() => setConfirmBlock(false)}>Cancel</Button>
         </div>
       </Dialog>
@@ -251,9 +259,11 @@ function Reviews({ profile, reviews, canReview, owner, onCreated }: { profile: P
   const [rating, setRating] = useState(5);
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function submit() {
     setError("");
+    setBusy(true);
     try {
       await api("/api/social", { method: "POST", body: JSON.stringify({ action: "review", profileId: profile.id, rating, body }) });
       setBody("");
@@ -262,6 +272,8 @@ function Reviews({ profile, reviews, canReview, owner, onCreated }: { profile: P
     } catch (err) {
       if (err instanceof ApiError && err.code === "auth_required") askAuth(err.message);
       else setError(err instanceof Error ? err.message : "Could not publish the rating.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -304,7 +316,7 @@ function Reviews({ profile, reviews, canReview, owner, onCreated }: { profile: P
             <textarea value={body} onChange={(event) => setBody(event.target.value)} rows={4} className={`${controlClass} h-auto py-3`} />
           </Field>
           {error ? <p className="text-sm text-danger">{error}</p> : null}
-          <Button type="submit">Publish rating</Button>
+          <Button type="submit" loading={busy}>Publish rating</Button>
         </form>
       ) : owner ? null : (
         <p className="flex items-start gap-2 px-1 text-[13px] leading-5 text-muted"><Icon name="info" size={16} className="mt-0.5 shrink-0" /> Ratings unlock after the hook accepts your order. Place one with Order now.</p>

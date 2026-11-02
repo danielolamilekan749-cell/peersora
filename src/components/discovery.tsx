@@ -249,6 +249,7 @@ export function ReportDialog({
   const { report } = usePlatform();
   const [reason, setReason] = useState<string>(REPORT_REASONS[0]);
   const [details, setDetails] = useState("");
+  const [busy, setBusy] = useState(false);
 
   return (
     <Dialog open={open} title="Report" onClose={onClose}>
@@ -263,9 +264,14 @@ export function ReportDialog({
         <Field label="Details" hint="Include what happened. Reports of suspected minors are reviewed first.">
           <textarea value={details} onChange={(event) => setDetails(event.target.value)} rows={4} className={`${controlClass} h-auto py-3`} />
         </Field>
-        <Button className="w-full" onClick={async () => {
-          const ok = await report({ targetType, targetId, reason, details });
-          if (ok) onClose();
+        <Button className="w-full" loading={busy} onClick={async () => {
+          setBusy(true);
+          try {
+            const ok = await report({ targetType, targetId, reason, details });
+            if (ok) onClose();
+          } finally {
+            setBusy(false);
+          }
         }}>
           <Icon name="flag" size={16} /> Submit report
         </Button>

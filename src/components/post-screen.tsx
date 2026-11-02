@@ -26,6 +26,7 @@ export function PostScreen({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [body, setBody] = useState("");
   const [reportOpen, setReportOpen] = useState(false);
+  const [commentBusy, setCommentBusy] = useState(false);
 
   function load() {
     return api<Payload>(`/api/posts/${id}`).then(setData).catch((err: unknown) => {
@@ -56,6 +57,8 @@ export function PostScreen({ id }: { id: string }) {
   const comments = data?.comments ?? [];
 
   async function comment() {
+    if (!body.trim() || commentBusy) return;
+    setCommentBusy(true);
     try {
       await api("/api/social", { method: "POST", body: JSON.stringify({ action: "comment", id: postId, body }) });
       setBody("");
@@ -64,6 +67,8 @@ export function PostScreen({ id }: { id: string }) {
     } catch (err) {
       if (err instanceof ApiError && err.code === "auth_required") askAuth(err.message);
       else toast(err instanceof Error ? err.message : "Could not comment");
+    } finally {
+      setCommentBusy(false);
     }
   }
 
@@ -140,8 +145,8 @@ export function PostScreen({ id }: { id: string }) {
           <form className="flex items-center gap-2 border-t border-line px-3 py-2.5" onSubmit={(event) => { event.preventDefault(); comment(); }}>
             <label className="sr-only" htmlFor="comment">Comment</label>
             <input id="comment" value={body} onChange={(event) => setBody(event.target.value)} placeholder="Add a comment" className="h-10 min-w-0 flex-1 rounded-full bg-canvas px-4 text-sm outline-none ring-1 ring-transparent focus:ring-plum" />
-            <button type="submit" disabled={!body.trim()} className="press grid h-10 w-10 shrink-0 place-items-center rounded-full bg-plum text-white disabled:opacity-40">
-              <Icon name="send" size={18} />
+            <button type="submit" disabled={!body.trim() || commentBusy} aria-busy={commentBusy || undefined} className="press grid h-10 w-10 shrink-0 place-items-center rounded-full bg-plum text-white disabled:opacity-40">
+              {commentBusy ? <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> : <Icon name="send" size={18} />}
             </button>
           </form>
         </div>

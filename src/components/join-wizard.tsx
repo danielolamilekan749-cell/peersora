@@ -10,7 +10,7 @@ import { GoogleButton } from "@/components/google-button";
 import { Icon, type IconName } from "@/components/icon";
 import { JoinChoice } from "@/components/join-choice";
 import { usePlatform } from "@/components/platform";
-import { Button, controlClass, Field } from "@/components/ui";
+import { Button, controlClass, Field, Spinner } from "@/components/ui";
 
 const hookSteps: { label: string; icon: IconName }[] = [
   { label: "Google", icon: "user" },
@@ -232,7 +232,7 @@ function HookFlow({ signedRole, profileId, username }: { signedRole: string; pro
           <h1 className="text-2xl font-semibold tracking-tight">Add your profile photo</h1>
           <p className="mt-1.5 text-sm leading-6 text-muted">A clear photo of you. This is what people see on search and your profile.</p>
           <div className="mt-5">
-            <PhotoField label="Profile photo" shape="round" url={avatar} onFile={choosePhoto} />
+            <PhotoField label="Profile photo" shape="round" url={avatar} loading={busy} onFile={choosePhoto} />
           </div>
           {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
           <Button className="mt-6 w-full" disabled={!avatar || busy} onClick={() => { setError(""); setPhotoDone(true); }}>
@@ -264,17 +264,17 @@ function HookFlow({ signedRole, profileId, username }: { signedRole: string; pro
   );
 }
 
-export function PhotoField({ label, url, error, hint, onFile, shape = "square" }: { label: string; url: string; error?: string; hint?: string; onFile: (file?: File) => void; shape?: "square" | "round" | "wide" }) {
+export function PhotoField({ label, url, error, hint, loading = false, onFile, shape = "square" }: { label: string; url: string; error?: string; hint?: string; loading?: boolean; onFile: (file?: File) => void; shape?: "square" | "round" | "wide" }) {
   return (
     <Field label={label} error={error} hint={hint}>
       <span className="flex items-center gap-4">
         <span className={cn("relative shrink-0 overflow-hidden bg-canvas ring-1 ring-line", shape === "round" ? "h-20 w-20 rounded-full" : shape === "wide" ? "h-20 w-36 rounded-2xl" : "h-20 w-20 rounded-2xl")}>
           {url ? <Image src={url} alt="" fill sizes="144px" className="object-cover" /> : <span className="grid h-full w-full place-items-center text-muted"><Icon name="camera" size={22} /></span>}
         </span>
-        <span className="press inline-flex h-10 cursor-pointer items-center gap-2 rounded-full bg-white px-4 text-[13px] font-semibold text-ink ring-1 ring-line hover:bg-canvas">
-          <Icon name="upload" size={16} /> {url ? "Replace photo" : "Upload photo"}
-          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => onFile(event.target.files?.[0])} className="sr-only" />
-        </span>
+        <label className={cn("press inline-flex h-10 items-center gap-2 rounded-full bg-white px-4 text-[13px] font-semibold text-ink ring-1 ring-line hover:bg-canvas", loading ? "cursor-wait opacity-60" : "cursor-pointer")}>
+          {loading ? <Spinner size={16} /> : <Icon name="upload" size={16} />} {loading ? "Uploading..." : url ? "Replace photo" : "Upload photo"}
+          <input type="file" accept="image/jpeg,image/png,image/webp" disabled={loading} onChange={(event) => onFile(event.target.files?.[0])} className="sr-only" />
+        </label>
       </span>
     </Field>
   );

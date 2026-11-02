@@ -62,8 +62,8 @@ export function OrderDialog({
                 <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={4} maxLength={500} className={`${controlClass} h-auto py-3`} placeholder="Tell them what you have in mind." />
               </Field>
               {error ? <p className="text-sm text-danger">{error}</p> : null}
-              <Button onClick={place} disabled={busy} className="w-full">
-                <Icon name="bag" size={18} /> {busy ? "Placing order" : "Place order"}
+              <Button onClick={place} loading={busy} className="w-full">
+                <Icon name="bag" size={18} /> Place order
               </Button>
             </>
           )}

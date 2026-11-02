@@ -21,6 +21,8 @@ export function OrdersScreen() {
   const { viewer, askJoin, toast, loading: platformLoading } = usePlatform();
   const [role, setRole] = useState("member");
   const [items, setItems] = useState<PublicOrder[] | null>(null);
+  // Tracks which order+action button is in-flight, e.g. "<id>:accept"
+  const [busyKey, setBusyKey] = useState<string | null>(null);
   const signedIn = Boolean(viewer && viewer.role !== "guest");
 
   const load = useCallback(async () => {
@@ -35,12 +37,16 @@ export function OrdersScreen() {
   }, [load, signedIn]);
 
   async function act(id: string, action: string, message: string) {
+    const key = `${id}:${action}`;
+    setBusyKey(key);
     try {
       await api("/api/orders", { method: "POST", body: JSON.stringify({ action, id }) });
       toast(message);
       await load();
     } catch (error) {
       toast(error instanceof Error ? error.message : "Could not update the order.");
+    } finally {
+      setBusyKey(null);
     }
   }
 
@@ -80,12 +86,12 @@ export function OrdersScreen() {
               <div className="mt-3 flex flex-wrap gap-2">
                 {hook && order.status === "pending" ? (
                   <>
-                    <Button size="sm" onClick={() => act(order.id, "accept", "Order accepted")}><Icon name="check" size={15} /> Accept</Button>
-                    <Button size="sm" variant="outline" onClick={() => act(order.id, "decline", "Order declined")}>Decline</Button>
+                    <Button size="sm" loading={busyKey === `${order.id}:accept`} onClick={() => act(order.id, "accept", "Order accepted")}><Icon name="check" size={15} /> Accept</Button>
+                    <Button size="sm" variant="outline" loading={busyKey === `${order.id}:decline`} onClick={() => act(order.id, "decline", "Order declined")}>Decline</Button>
                   </>
                 ) : null}
-                {hook && order.status === "accepted" ? <Button size="sm" onClick={() => act(order.id, "complete", "Order completed")}><Icon name="bagCheck" size={16} /> Mark completed</Button> : null}
-                {!hook && (order.status === "pending" || order.status === "accepted") ? <Button size="sm" variant="outline" onClick={() => act(order.id, "cancel", "Order cancelled")}>Cancel order</Button> : null}
+                {hook && order.status === "accepted" ? <Button size="sm" loading={busyKey === `${order.id}:complete`} onClick={() => act(order.id, "complete", "Order completed")}><Icon name="bagCheck" size={16} /> Mark completed</Button> : null}
+                {!hook && (order.status === "pending" || order.status === "accepted") ? <Button size="sm" variant="outline" loading={busyKey === `${order.id}:cancel`} onClick={() => act(order.id, "cancel", "Order cancelled")}>Cancel order</Button> : null}
                 {!hook && order.canRate ? (
                   <Link href={`/profile/${order.profile.username}?tab=ratings`} className="press inline-flex h-9 items-center gap-1.5 rounded-full bg-rose px-4 text-[13px] font-semibold text-plum"><Icon name="starBold" size={15} /> Rate</Link>
                 ) : null}

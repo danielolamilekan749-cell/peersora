@@ -59,6 +59,7 @@ export function SettingsScreen() {
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [privacy, setPrivacy] = useState<"city" | "region" | "hidden">("city");
+  const [busyKey, setBusyKey] = useState<string | null>(null);
 
   async function load() {
     const next = await api<SettingsData>("/api/me?view=settings");
@@ -75,11 +76,23 @@ export function SettingsScreen() {
     load().catch((error: unknown) => toast(error instanceof Error ? error.message : "Settings unavailable"));
   }, [toast]);
 
-  async function patch(body: Record<string, unknown>, message: string) {
-    await api("/api/me", { method: "PATCH", body: JSON.stringify(body) });
-    toast(message);
-    await load();
-    await refresh();
+  async function patch(body: Record<string, unknown>, message: string, key = "generic") {
+    setBusyKey(key);
+    try {
+      await api("/api/me", { method: "PATCH", body: JSON.stringify(body) });
+      toast(message);
+      try {
+        await Promise.all([load(), refresh()]);
+      } catch (error) {
+        toast(error instanceof Error ? `Saved, but could not refresh settings: ${error.message}` : "Saved, but could not refresh settings.");
+      }
+      return true;
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Could not save your settings.");
+      return false;
+    } finally {
+      setBusyKey(null);
+    }
   }
 
   if (!data || !prefs) {
@@ -98,7 +111,7 @@ export function SettingsScreen() {
       <Section icon="user" title="Account" body="Your name is shown on orders and ratings. Your email and phone stay private.">
         <Field label="Name"><input className={controlClass} value={fullName} onChange={(event) => setFullName(event.target.value)} /></Field>
         <Field label="Phone" hint="Private. Used only for your account, never on your public profile."><input className={controlClass} value={phone} onChange={(event) => setPhone(event.target.value)} /></Field>
-        <Button onClick={() => patch({ fullName, phone }, "Account saved")}>Save account</Button>
+        <Button loading={busyKey === "account"} onClick={() => patch({ fullName, phone }, "Account saved", "account")}>Save account</Button>
       </Section>
       {data.profile ? (
         <Section icon="shield" title="Privacy" body="Control what visitors can see on your profile.">
@@ -109,7 +122,7 @@ export function SettingsScreen() {
               <option value="hidden">Hidden</option>
             </select>
           </Field>
-          <Button onClick={() => patch({ locationPrivacy: privacy }, "Privacy saved")}>Save privacy</Button>
+          <Button loading={busyKey === "privacy"} onClick={() => patch({ locationPrivacy: privacy }, "Privacy saved", "privacy")}>Save privacy</Button>
         </Section>
       ) : null}
       <Section icon="bell" title="Notifications" body="Choose what shows up in your alerts.">
@@ -121,7 +134,7 @@ export function SettingsScreen() {
             </label>
           ))}
         </div>
-        <Button onClick={() => patch({ notificationPrefs: prefs }, "Notification preferences saved")}>Save notifications</Button>
+        <Button loading={busyKey === "notifications"} onClick={() => patch({ notificationPrefs: prefs }, "Notification preferences saved", "notifications")}>Save notifications</Button>
       </Section>
       <Section icon="block" title="Blocked profiles" body="Blocked profiles cannot see you or message you.">
         {data.blocked.length === 0 ? <p className="rounded-2xl bg-canvas px-4 py-3 text-sm text-muted">You have not blocked anyone.</p> : null}
@@ -131,7 +144,19 @@ export function SettingsScreen() {
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-xs font-semibold text-plum">{block.name.slice(0, 1)}</span>
               <span className="truncate">{block.name}{block.username ? <span className="text-muted"> @{block.username}</span> : null}</span>
             </span>
-            <Button size="sm" variant="outline" onClick={async () => { await api("/api/social", { method: "POST", body: JSON.stringify({ action: "unblock", id: block.id }) }); await load(); }}>Unblock</Button>
+            <Button size="sm" variant="outline" loading={busyKey === `unblock:${block.id}`} onClick={async () => {
+              const key = `unblock:${block.id}`;
+              setBusyKey(key);
+              try {
+                await api("/api/social", { method: "POST", body: JSON.stringify({ action: "unblock", id: block.id }) });
+                await load();
+                toast("Profile unblocked");
+              } catch (error) {
+                toast(error instanceof Error ? error.message : "Could not unblock this profile.");
+              } finally {
+                setBusyKey(null);
+              }
+            }}>Unblock</Button>
           </div>
         ))}
       </Section>
@@ -139,9 +164,9 @@ export function SettingsScreen() {
         <div className="flex flex-wrap gap-2">
           {data.account.role === "creator" ? (
             data.account.deactivated ? (
-              <Button variant="outline" onClick={() => patch({ reactivate: true }, "Account reactivated. Turn discovery back on when you are ready.")}>Reactivate</Button>
+              <Button variant="outline" loading={busyKey === "reactivate"} onClick={() => patch({ reactivate: true }, "Account reactivated. Turn discovery back on when you are ready.", "reactivate")}>Reactivate</Button>
             ) : (
-              <Button variant="outline" onClick={() => patch({ deactivate: true }, "Profile hidden. You can still sign in.")}><Icon name="eyeClosed" size={16} /> Deactivate profile</Button>
+              <Button variant="outline" loading={busyKey === "deactivate"} onClick={() => patch({ deactivate: true }, "Profile hidden. You can still sign in.", "deactivate")}><Icon name="eyeClosed" size={16} /> Deactivate profile</Button>
             )
           ) : null}
           <Button variant="danger" onClick={() => setConfirmDelete(true)}><Icon name="trash" size={16} /> Delete account</Button>
@@ -150,9 +175,14 @@ export function SettingsScreen() {
       <Dialog open={confirmDelete} title="Delete your account?" onClose={() => setConfirmDelete(false)}>
         <p className="text-sm leading-6 text-muted">Your public profile will be removed and the account cannot be signed into again.</p>
         <div className="mt-4 flex gap-2">
-          <Button className="flex-1" variant="danger" onClick={async () => {
-            await patch({ deleteAccount: true }, "Account deleted");
-            await api("/api/auth/logout", { method: "POST" });
+          <Button className="flex-1" variant="danger" loading={busyKey === "delete"} onClick={async () => {
+            const deleted = await patch({ deleteAccount: true }, "Account deleted", "delete");
+            if (!deleted) return;
+            try {
+              await api("/api/auth/logout", { method: "POST" });
+            } catch (error) {
+              toast(error instanceof Error ? error.message : "Account deleted, but sign out failed.");
+            }
             router.push("/");
             router.refresh();
           }}>Delete account</Button>

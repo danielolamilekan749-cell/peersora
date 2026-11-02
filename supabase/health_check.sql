@@ -25,7 +25,13 @@ select * from (values
   ('Sign-up trigger exists (Google creates an account row)',
     exists (select 1 from pg_trigger where tgname = 'on_auth_user_created')),
   ('Storage buckets avatars + posts exist',
-    (select count(*) from storage.buckets where id in ('avatars', 'posts')) = 2)
+    (select count(*) from storage.buckets where id in ('avatars', 'posts')) = 2),
+  ('0006 applied: fast read is available to the server only',
+    exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public' and p.proname = 'app_read')
+    and not exists (select 1 from information_schema.routine_privileges
+                    where routine_schema = 'public' and routine_name = 'app_read'
+                      and grantee in ('anon', 'authenticated', 'PUBLIC')))
 ) as t(check_name, ok);
 
 -- What is in the database right now.

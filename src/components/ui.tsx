@@ -7,12 +7,15 @@ import { Icon, type IconName } from "@/components/icon";
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "outline" | "ghost" | "danger" | "soft";
   size?: "sm" | "md";
+  loading?: boolean;
 };
 
-export function Button({ variant = "primary", size = "md", className, type = "button", ...props }: ButtonProps) {
+export function Button({ variant = "primary", size = "md", className, type = "button", loading = false, disabled, children, ...props }: ButtonProps) {
   return (
     <button
       type={type}
+      disabled={loading || disabled}
+      aria-busy={loading || undefined}
       className={cn(
         "press inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold disabled:cursor-not-allowed disabled:opacity-50",
         size === "sm" ? "h-9 px-4 text-[13px]" : "h-11 px-5 text-sm",
@@ -24,7 +27,20 @@ export function Button({ variant = "primary", size = "md", className, type = "bu
         className,
       )}
       {...props}
-    />
+    >
+      {loading ? <Spinner size={size === "sm" ? 14 : 16} /> : null}
+      {children}
+    </button>
+  );
+}
+
+/** Inline SVG spinner — zero extra deps, animated via Tailwind animate-spin */
+export function Spinner({ size = 16, className }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden className={cn("animate-spin", className)}>
+      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="28" strokeDashoffset="10" opacity="0.25" />
+      <path d="M8 2a6 6 0 0 1 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -52,17 +68,7 @@ export function IconButton({
 export const controlClass =
   "h-11 w-full rounded-xl bg-white px-3.5 text-sm text-ink outline-none ring-1 ring-line transition placeholder:text-muted/70 focus:ring-2 focus:ring-plum";
 
-export function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  error?: string;
-  children: ReactNode;
-}) {
+export function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: ReactNode }) {
   return (
     <label className="block">
       <span className="mb-1.5 block text-[13px] font-medium text-ink">{label}</span>
@@ -119,19 +125,7 @@ export function Tag({ children, tone = "soft", className }: { children: ReactNod
   );
 }
 
-export function Dialog({
-  open,
-  title,
-  onClose,
-  children,
-  wide = false,
-}: {
-  open: boolean;
-  title: string;
-  onClose: () => void;
-  children: ReactNode;
-  wide?: boolean;
-}) {
+export function Dialog({ open, title, onClose, children, wide = false }: { open: boolean; title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -185,7 +179,10 @@ export function Menu({ label, children, align = "right" }: { label: string; chil
         <Icon name="more" size={20} />
       </button>
       {open ? (
-        <div className={cn("fade-up absolute z-20 mt-1 w-52 rounded-2xl bg-white p-1.5 text-left shadow-float ring-1 ring-line", align === "right" ? "right-0" : "left-0")} onClick={() => setOpen(false)}>
+        <div
+          className={cn("fade-up absolute z-20 mt-1 w-52 rounded-2xl bg-white p-1.5 text-left shadow-float ring-1 ring-line", align === "right" ? "right-0" : "left-0")}
+          onClick={() => setOpen(false)}
+        >
           {children}
         </div>
       ) : null}

@@ -12,7 +12,7 @@ import type { NotificationPrefs } from "@/lib/types";
 import { Icon, type IconName } from "@/components/icon";
 import { PhotoField } from "@/components/join-wizard";
 import { usePlatform } from "@/components/platform";
-import { Button, controlClass, Dialog, EmptyState, Field, PageTitle, Skeleton, Switch, Tag } from "@/components/ui";
+import { Button, controlClass, Dialog, EmptyState, Field, PageTitle, Skeleton, Spinner, Switch, Tag } from "@/components/ui";
 
 type ManagedComment = { id: string; body: string; hidden: boolean; createdAt: string; authorName: string };
 type ManagedPost = {
@@ -175,6 +175,7 @@ export function ProfileEditor() {
   const { toast } = usePlatform();
   const [form, setForm] = useState<DashboardData["profile"] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState({ avatar: false, cover: false });
 
   useEffect(() => {
     if (data?.profile) setForm(data.profile);
@@ -201,11 +202,18 @@ export function ProfileEditor() {
 
   async function photo(file: File | undefined, key: "avatar" | "cover") {
     if (!file) return;
-    const url = await uploadImage(file);
-    setForm((current) => {
-      if (!current) return current;
-      return key === "avatar" ? { ...current, avatar: url } : { ...current, cover: url };
-    });
+    setPhotoBusy((current) => ({ ...current, [key]: true }));
+    try {
+      const url = await uploadImage(file);
+      setForm((current) => {
+        if (!current) return current;
+        return key === "avatar" ? { ...current, avatar: url } : { ...current, cover: url };
+      });
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Upload failed.");
+    } finally {
+      setPhotoBusy((current) => ({ ...current, [key]: false }));
+    }
   }
 
   return (
@@ -215,8 +223,8 @@ export function ProfileEditor() {
         <div className="space-y-4">
           <section className="card space-y-4 p-5">
             <h2 className="flex items-center gap-2 text-sm font-semibold"><Icon name="camera" size={18} className="text-plum" /> Photos</h2>
-            <PhotoField label="Profile photo" shape="round" url={form.avatar} onFile={(file) => photo(file, "avatar")} />
-            <PhotoField label="Cover photo" shape="wide" url={form.cover} onFile={(file) => photo(file, "cover")} hint="JPG, PNG, or WebP up to 4MB." />
+            <PhotoField label="Profile photo" shape="round" url={form.avatar} loading={photoBusy.avatar} onFile={(file) => photo(file, "avatar")} />
+            <PhotoField label="Cover photo" shape="wide" url={form.cover} loading={photoBusy.cover} onFile={(file) => photo(file, "cover")} hint="JPG, PNG, or WebP up to 4MB." />
           </section>
           <section className="card space-y-4 p-5">
             <h2 className="flex items-center gap-2 text-sm font-semibold"><Icon name="user" size={18} className="text-plum" /> About you</h2>
@@ -271,7 +279,7 @@ export function ProfileEditor() {
             </label>
           </section>
           <div className="flex gap-2">
-            <Button disabled={busy} onClick={() => save()} className="flex-1">{busy ? "Saving" : "Save profile"}</Button>
+            <Button loading={busy} disabled={busy} onClick={() => save()} className="flex-1">Save profile</Button>
             <Link href={`/profile/${form.username}`} className="press inline-flex h-11 items-center gap-1.5 rounded-full bg-white px-4 text-sm font-semibold ring-1 ring-line"><Icon name="eye" size={16} /> Preview</Link>
           </div>
         </aside>
@@ -287,9 +295,14 @@ export function PostsManager() {
   const [open, setOpen] = useState(params.get("new") === "1");
   const [caption, setCaption] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [frame, setFrame] = useState<"portrait" | "square">("portrait");
   const [editing, setEditing] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [toggleBusy, setToggleBusy] = useState<string | null>(null);
+  const [hidingComment, setHidingComment] = useState<string | null>(null);
 
   if (loading) return <DashboardSkeleton />;
   if (data?.role === "admin") {
@@ -299,21 +312,46 @@ export function PostsManager() {
 
   async function addFiles(list: FileList | null) {
     if (!list) return;
-    const uploaded: string[] = [];
-    for (const file of Array.from(list).slice(0, 10)) uploaded.push(await uploadImage(file));
-    setImages((current) => [...current, ...uploaded].slice(0, 10));
+    setUploading(true);
+    try {
+      const uploaded = await Promise.all(Array.from(list).slice(0, 10).map(uploadImage));
+      setImages((current) => [...current, ...uploaded].slice(0, 10));
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function hideComment(id: string) {
+    setHidingComment(id);
+    try {
+      await api("/api/social", { method: "POST", body: JSON.stringify({ action: "hide-comment", id }) });
+      await reload();
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Could not hide the comment.");
+    } finally {
+      setHidingComment(null);
+    }
   }
 
   async function save() {
-    const payload = { caption, images, frame, visibility: "public" };
-    if (editing) await api(`/api/posts/${editing}`, { method: "PATCH", body: JSON.stringify(payload) });
-    else await api("/api/posts", { method: "POST", body: JSON.stringify(payload) });
-    setOpen(false);
-    setCaption("");
-    setImages([]);
-    setEditing(null);
-    toast("Post saved");
-    await reload();
+    setBusy(true);
+    try {
+      const payload = { caption, images, frame, visibility: "public" as const };
+      if (editing) await api(`/api/posts/${editing}`, { method: "PATCH", body: JSON.stringify(payload) });
+      else await api("/api/posts", { method: "POST", body: JSON.stringify(payload) });
+      setOpen(false);
+      setCaption("");
+      setImages([]);
+      setEditing(null);
+      toast("Post saved");
+      await reload();
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Could not save the post.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -346,7 +384,22 @@ export function PostsManager() {
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 <Button size="sm" variant="outline" onClick={() => { setEditing(post.id); setCaption(post.caption); setImages(post.images); setFrame(post.frame); setOpen(true); }}><Icon name="pen" size={14} /> Edit</Button>
-                <Button size="sm" variant="outline" onClick={async () => { await api(`/api/posts/${post.id}`, { method: "PATCH", body: JSON.stringify({ caption: post.caption, images: post.images, frame: post.frame, visibility: post.visibility === "public" ? "hidden" : "public" }) }); await reload(); }}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  loading={toggleBusy === post.id}
+                  onClick={async () => {
+                    setToggleBusy(post.id);
+                    try {
+                      await api(`/api/posts/${post.id}`, { method: "PATCH", body: JSON.stringify({ caption: post.caption, images: post.images, frame: post.frame, visibility: post.visibility === "public" ? "hidden" : "public" }) });
+                      await reload();
+                    } catch (error) {
+                      toast(error instanceof Error ? error.message : "Could not update the post.");
+                    } finally {
+                      setToggleBusy(null);
+                    }
+                  }}
+                >
                   <Icon name={post.visibility === "public" ? "eyeClosed" : "eye"} size={14} /> {post.visibility === "public" ? "Hide" : "Show"}
                 </Button>
                 <Button size="sm" variant="danger" onClick={() => setConfirmDelete(post.id)}><Icon name="trash" size={14} /> Delete</Button>
@@ -356,7 +409,7 @@ export function PostsManager() {
                   {post.comments.map((comment) => (
                     <div key={comment.id} className="flex items-start justify-between gap-3 text-[13px]">
                       <p className={comment.hidden ? "text-muted line-through" : ""}><span className="font-medium">{comment.authorName}</span> {comment.body}</p>
-                      {!comment.hidden ? <button type="button" className="shrink-0 text-xs text-muted hover:text-ink" onClick={async () => { await api("/api/social", { method: "POST", body: JSON.stringify({ action: "hide-comment", id: comment.id }) }); await reload(); }}>Hide</button> : null}
+                      {!comment.hidden ? <Button size="sm" variant="ghost" className="h-7 shrink-0 px-2 text-xs" loading={hidingComment === comment.id} onClick={() => hideComment(comment.id)}>Hide</Button> : null}
                     </div>
                   ))}
                 </div>
@@ -376,10 +429,10 @@ export function PostsManager() {
                 </span>
               ))}
               {images.length < 10 ? (
-                <span className="press grid h-20 w-20 cursor-pointer place-items-center rounded-xl bg-canvas text-muted ring-1 ring-dashed ring-line hover:text-ink">
-                  <Icon name="addCircle" size={24} />
-                  <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" onChange={(event) => addFiles(event.target.files)} />
-                </span>
+                <label className={cn("press grid h-20 w-20 cursor-pointer place-items-center rounded-xl bg-canvas text-muted ring-1 ring-dashed ring-line hover:text-ink", uploading && "pointer-events-none opacity-60")}>
+                  {uploading ? <Spinner size={22} /> : <Icon name="addCircle" size={24} />}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" disabled={uploading} onChange={(event) => addFiles(event.target.files)} />
+                </label>
               ) : null}
             </span>
           </Field>
@@ -391,13 +444,25 @@ export function PostsManager() {
               ))}
             </div>
           </Field>
-          <Button onClick={save} disabled={!caption.trim() || images.length === 0} className="w-full">Save post</Button>
+          <Button loading={busy} onClick={save} disabled={!caption.trim() || images.length === 0 || uploading} className="w-full">Save post</Button>
         </div>
       </Dialog>
       <Dialog open={Boolean(confirmDelete)} title="Delete this post?" onClose={() => setConfirmDelete(null)}>
         <p className="text-sm leading-6 text-muted">Likes and comments on it will be removed.</p>
         <div className="mt-4 flex gap-2">
-          <Button className="flex-1" variant="danger" onClick={async () => { if (confirmDelete) { await api(`/api/posts/${confirmDelete}`, { method: "DELETE" }); setConfirmDelete(null); await reload(); } }}>Delete</Button>
+          <Button className="flex-1" variant="danger" loading={deleting} onClick={async () => {
+            if (!confirmDelete) return;
+            setDeleting(true);
+            try {
+              await api(`/api/posts/${confirmDelete}`, { method: "DELETE" });
+              setConfirmDelete(null);
+              await reload();
+            } catch (error) {
+              toast(error instanceof Error ? error.message : "Could not delete the post.");
+            } finally {
+              setDeleting(false);
+            }
+          }}>Delete</Button>
           <Button className="flex-1" variant="outline" onClick={() => setConfirmDelete(null)}>Cancel</Button>
         </div>
       </Dialog>
